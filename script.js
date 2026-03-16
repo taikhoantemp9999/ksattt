@@ -433,6 +433,14 @@ function loadSurveyToForm(id) {
     const survey = surveys.find(s => s.id === id);
     if (!survey) return;
 
+    // Chuẩn hóa cấu trúc để tránh lỗi khi bản ghi mới chỉ có tên
+    if (!survey.ha_tang_thiet_bi) survey.ha_tang_thiet_bi = {};
+    if (!survey.thong_tin_lien_he) survey.thong_tin_lien_he = {};
+    if (!survey.thong_tin_lien_he.dau_moi_cung_cap) survey.thong_tin_lien_he.dau_moi_cung_cap = {};
+    if (!survey.thong_tin_lien_he.don_vi_van_hanh) survey.thong_tin_lien_he.don_vi_van_hanh = {};
+    if (!survey.thong_tin_lien_he.cong_an_xa) survey.thong_tin_lien_he.cong_an_xa = {};
+    if (!Array.isArray(survey.he_thong_thong_tin)) survey.he_thong_thong_tin = [];
+
     const form = document.getElementById('surveyForm');
     form.reset(); // clear cũ
 
