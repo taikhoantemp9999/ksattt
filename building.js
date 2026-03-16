@@ -93,6 +93,9 @@ suggestionsRef.on('value', (snapshot) => {
 });
 
 // ===== LOGIC OFFLINE =====
+let pendingSyncCustomerIds = new Set(JSON.parse(localStorage.getItem('PENDING_BUILDING_SYNC') || '[]'));
+let pendingSuggestions = JSON.parse(localStorage.getItem('PENDING_SUGGESTIONS') || '[]');
+
 function updateNetworkStatus() {
     const statusDiv = document.getElementById('networkStatus');
     if (!navigator.onLine) {
@@ -111,9 +114,6 @@ setInterval(() => {
     syncBuildingsOffline();
     syncSuggestionsOffline();
 }, 10000);
-
-let pendingSyncCustomerIds = new Set(JSON.parse(localStorage.getItem('PENDING_BUILDING_SYNC') || '[]'));
-let pendingSuggestions = JSON.parse(localStorage.getItem('PENDING_SUGGESTIONS') || '[]');
 
 function addPendingBuildingSync(cId) {
     if (cId && cId !== 'unknown') {
