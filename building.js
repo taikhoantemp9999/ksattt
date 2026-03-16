@@ -31,11 +31,16 @@ const equipmentCountBadge = document.getElementById("equipmentCountBadge");
 
 // Khởi tạo Datalist Gợi ý từ Firebase
 let userSuggestions = {
-    rooms: [],
+    rooms: [
+        "Phòng Kế toán", "Phòng Chủ tịch", "Phòng Phó Chủ tịch",
+        "Phòng Tiếp dân", "Phòng Tư pháp", "Phòng Địa chính",
+        "Công an xã", "Kho"
+    ],
     eqNames: [],
     eqModels: [],
     eqLocations: [],
-    eqISPs: []
+    eqISPs: [],
+    eqPurposes: ["Wifi", "Switch chia mạng"]
 };
 
 // Cấu hình Firebase 
@@ -59,14 +64,30 @@ const surveysRef = database.ref('surveys_ATTT');
 
 // Lắng nghe dữ liệu Gợi ý từ API tập trung
 suggestionsRef.on('value', (snapshot) => {
-    if(snapshot.exists()) {
+    if (snapshot.exists()) {
         const val = snapshot.val();
-        userSuggestions.rooms = val.rooms || [];
+        // Nếu val.rooms undefined (vd trống trên DB), ta không đè bằng [] liền mà có thể dùng mặc định, 
+        // nhưng để cho phép user xóa hết, ta lấy val.rooms. 
+        // Nếu chưa từng có rooms node, ta khởi tạo lần đầu lên Firebase
+        if (val.rooms === undefined && snapshot.child('eqNames').exists()) {
+            // Có nhánh khác nhưng mất nhánh rooms (có thể do xóa hết)
+            userSuggestions.rooms = [];
+        } else if (val.rooms !== undefined) {
+            userSuggestions.rooms = val.rooms;
+        } else {
+            // Mới tinh
+            suggestionsRef.child('rooms').set(userSuggestions.rooms);
+        }
+
         userSuggestions.eqNames = val.eqNames || [];
         userSuggestions.eqModels = val.eqModels || [];
         userSuggestions.eqLocations = val.eqLocations || [];
         userSuggestions.eqISPs = val.eqISPs || [];
+        userSuggestions.eqPurposes = val.eqPurposes || ["Wifi", "Switch chia mạng"];
         populateDataLists();
+    } else {
+        // Firebase suggest completely empty
+        suggestionsRef.set(userSuggestions);
     }
 });
 
@@ -78,7 +99,7 @@ const customerName = urlParams.get('customerName') || 'Khách hàng chưa rõ';
 // Xử lý nút Back trang chính (kèm editId)
 btnBackToMain.addEventListener('click', (e) => {
     e.preventDefault();
-    if(customerId !== 'unknown') {
+    if (customerId !== 'unknown') {
         window.location.href = `index.html?editId=${customerId}`;
     } else {
         window.location.href = 'index.html';
@@ -95,7 +116,7 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
     const template = document.getElementById("buildingTemplate").value;
 
     document.getElementById("displayBuildingName").innerText = name;
-    
+
     // Tạo mảng Dữ liệu Tòa nhà mới
     buildingData = {
         id: 'bldg_' + Date.now(),
@@ -111,7 +132,7 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
             buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Corridor', name: `Hành lang Tầng ${f}`, status: 0, position: 'center' });
             buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Staircase', name: `Cầu thang Tầng ${f}`, status: 0, position: 'center' });
         }
-        
+
         const centerIdx = Math.ceil(numRooms / 2);
         for (let r = 1; r <= numRooms; r++) {
             let roomNumber = (f * 100) + r;
@@ -131,11 +152,11 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
 
 // Hàm lưu Mảng Dữ liệu Tòa nhà của Khách Hàng
 function saveBuildingsArrayLocally() {
-    if(customerId === 'unknown') return;
-    
+    if (customerId === 'unknown') return;
+
     // Backup offline
     localStorage.setItem(`BUILDINGS_LIST_${customerId}`, JSON.stringify(buildingsArray));
-    
+
     // Lưu chính thức lên Firebase Cloud
     surveysRef.child(customerId).child('buildingsArray').set(buildingsArray).catch(err => {
         console.error("Lỗi đồng bộ Sơ đồ lên Firebase: ", err);
@@ -144,9 +165,9 @@ function saveBuildingsArrayLocally() {
 
 // Cập nhật lưu buildingData (khi sửa/thêm phòng thiết bị)
 function saveBuildingDataLocally() {
-    if(!buildingData.id) return;
+    if (!buildingData.id) return;
     const index = buildingsArray.findIndex(b => b.id === buildingData.id);
-    if(index !== -1) {
+    if (index !== -1) {
         buildingsArray[index] = buildingData;
         saveBuildingsArrayLocally();
     }
@@ -185,8 +206,8 @@ btnBackToList.addEventListener("click", showListSection);
 // Khôi phục dữ liệu khi load trang
 window.addEventListener('DOMContentLoaded', () => {
     populateDataLists();
-    
-    if(customerId === 'unknown') {
+
+    if (customerId === 'unknown') {
         showListSection();
         return;
     }
@@ -195,28 +216,28 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Đọc trên Firebase làm Nguồn Chân lý (Source of Truth)
     surveysRef.child(customerId).child('buildingsArray').once('value', snapshot => {
-        if(snapshot.exists()) {
+        if (snapshot.exists()) {
             // Đã có dữ liệu trên Cloud -> Lấy xài luôn
             buildingsArray = snapshot.val() || [];
-            if(!Array.isArray(buildingsArray)) {
+            if (!Array.isArray(buildingsArray)) {
                 // Handle cases where array is converted to object with indices by firebase
                 buildingsArray = Object.values(buildingsArray);
             }
-            
+
             // Đảm bảo các node/eq bên trong có mảng, nếu trống firebase hay trả về undefined
             buildingsArray.forEach(bldg => {
-                if(!bldg.nodes) bldg.nodes = [];
-                if(!bldg.equipments) bldg.equipments = [];
+                if (!bldg.nodes) bldg.nodes = [];
+                if (!bldg.equipments) bldg.equipments = [];
             });
-            
+
             // Backup Local
             localStorage.setItem(`BUILDINGS_LIST_${customerId}`, JSON.stringify(buildingsArray));
-            
+
         } else {
             // Firebase chưa Có -> Cố gắng Migrate từ dữ liệu cũ (chỉ 1 tòa nhà) ở Local storage đẩy lên
             const oldSaved = localStorage.getItem(`BUILDING_MAP_${customerId}`);
             const newSaved = localStorage.getItem(`BUILDINGS_LIST_${customerId}`);
-            
+
             if (newSaved) {
                 buildingsArray = JSON.parse(newSaved);
                 saveBuildingsArrayLocally(); // Push lên Cloud
@@ -229,16 +250,16 @@ window.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem(`BUILDING_MAP_${customerId}`); // Xóa cái cũ
             }
         }
-        
-        showListSection(); 
+
+        showListSection();
     });
 });
 
 // Render Danh sách Tòa nhà
 function renderBuildingsList() {
     buildingsListContainer.innerHTML = '';
-    
-    if(buildingsArray.length === 0) {
+
+    if (buildingsArray.length === 0) {
         buildingsZeroState.style.display = 'block';
         return;
     }
@@ -247,7 +268,7 @@ function renderBuildingsList() {
     buildingsArray.forEach(bldg => {
         const floorCount = new Set(bldg.nodes.map(n => n.floor)).size;
         const eqCount = bldg.equipments ? bldg.equipments.length : 0;
-        
+
         const card = document.createElement('div');
         card.className = 'card';
         card.style.display = 'flex';
@@ -255,7 +276,7 @@ function renderBuildingsList() {
         card.style.alignItems = 'center';
         card.style.padding = '16px';
         card.style.marginBottom = '0';
-        
+
         card.innerHTML = `
             <div>
                 <h3 style="margin-bottom: 4px; color: var(--primary);">${bldg.name}</h3>
@@ -278,25 +299,25 @@ function renderBuildingsList() {
 function migrateLegacyPositions() {
     let hasChanges = false;
     buildingData.nodes.forEach(n => {
-        if(!n.position) {
+        if (!n.position) {
             hasChanges = true;
-            if(n.type === 'Corridor' || n.type === 'Staircase' || n.type === 'Stairs') n.position = 'center';
+            if (n.type === 'Corridor' || n.type === 'Staircase' || n.type === 'Stairs') n.position = 'center';
             else n.position = 'left'; // Placeholder
         }
     });
 
-    if(hasChanges) {
+    if (hasChanges) {
         // Chia đôi tự động cho các tầng
         const floorsMap = {};
         buildingData.nodes.forEach(n => {
-            if(!floorsMap[n.floor]) floorsMap[n.floor] = [];
+            if (!floorsMap[n.floor]) floorsMap[n.floor] = [];
             floorsMap[n.floor].push(n);
         });
         Object.keys(floorsMap).forEach(f => {
             const arr = floorsMap[f];
             const rooms = arr.filter(n => n.type === 'Room');
             const centers = arr.filter(n => n.type !== 'Room');
-            if(centers.length > 0) {
+            if (centers.length > 0) {
                 const mid = Math.ceil(rooms.length / 2);
                 rooms.forEach((r, idx) => r.position = idx < mid ? 'left' : 'right');
             } else {
@@ -308,9 +329,9 @@ function migrateLegacyPositions() {
 }
 
 // Xử lý Sửa tòa nhà
-window.editBuilding = function(id) {
+window.editBuilding = function (id) {
     const target = buildingsArray.find(b => b.id === id);
-    if(target) {
+    if (target) {
         buildingData = target;
         migrateLegacyPositions();
         document.getElementById("displayBuildingName").innerText = buildingData.name;
@@ -320,8 +341,8 @@ window.editBuilding = function(id) {
 };
 
 // Xử lý Xóa tòa nhà
-window.deleteBuilding = function(id) {
-    if(confirm("Xác nhận Xóa Tòa nhà này? Mọi thiết bị bên trong sẽ bị mất!")) {
+window.deleteBuilding = function (id) {
+    if (confirm("Xác nhận Xóa Tòa nhà này? Mọi thiết bị bên trong sẽ bị mất!")) {
         buildingsArray = buildingsArray.filter(b => b.id !== id);
         saveBuildingsArrayLocally();
         renderBuildingsList();
@@ -336,15 +357,19 @@ function populateDataLists() {
         'eqNameSuggestions': userSuggestions.eqNames,
         'eqModelSuggestions': userSuggestions.eqModels,
         'eqLocationSuggestions': userSuggestions.eqLocations,
-        'eqISPSuggestions': userSuggestions.eqISPs
+        'eqISPSuggestions': userSuggestions.eqISPs,
+        'eqPurposeSuggestions': userSuggestions.eqPurposes
     };
-    
-    for(let listId in listMap) {
+
+    for (let listId in listMap) {
         const dlist = document.getElementById(listId);
-        if(dlist) {
-            // Chỉ thêm các mục mới từ user, không xóa các mục hardcode sẵn trong HTML
+        if (dlist) {
+            if (listId === 'roomNameSuggestions') {
+                dlist.innerHTML = '';
+            }
+            // Chỉ thêm các mục mới từ user, không xóa các mục hardcode sẵn trong HTML (trừ phòng)
             listMap[listId].forEach(val => {
-                if(!Array.from(dlist.options).find(opt => opt.value === val)) {
+                if (!Array.from(dlist.options).find(opt => opt.value === val)) {
                     const opt = document.createElement('option');
                     opt.value = val;
                     dlist.appendChild(opt);
@@ -356,12 +381,12 @@ function populateDataLists() {
 
 // Hàm lưu gợi ý mới đồng bộ lên Firebase
 function saveSuggestion(category, value) {
-    if(!value) return;
+    if (!value) return;
     value = value.trim();
-    if(value === "") return;
-    
+    if (value === "") return;
+
     // Nếu từ mới tinh chưa có trên cloud
-    if(!userSuggestions[category].includes(value)) {
+    if (!userSuggestions[category].includes(value)) {
         userSuggestions[category].push(value);
         suggestionsRef.child(category).set(userSuggestions[category]);
         // Bỏ populateDataLists() chạy cục bộ vì Firebase on('value') sẽ tự trigger lại
@@ -380,19 +405,19 @@ function renderMap() {
     });
 
     // Lặp qua từng tầng và render HTML
-    Object.keys(floorsMap).sort((a,b) => b - a).forEach(floorNum => {
+    Object.keys(floorsMap).sort((a, b) => b - a).forEach(floorNum => {
         const nodesInFloor = floorsMap[floorNum];
-        
+
         const floorDiv = document.createElement('div');
         floorDiv.className = 'floor-row';
         floorDiv.innerHTML = `<div class="floor-title" style="display:flex; justify-content:space-between; align-items:center;">
             <span>TẦNG ${floorNum}</span>
             <button onclick="deleteFloor(${floorNum})" style="background:none; border:none; color:#ef4444; font-size:0.9rem; cursor:pointer;" title="Xóa Tầng">&times; Xóa tầng</button>
         </div>`;
-        
+
         const scrollDiv = document.createElement('div');
         scrollDiv.className = 'floor-horizontal-scroll';
-        
+
         const leftNodes = nodesInFloor.filter(n => n.position === 'left');
         const centerNodes = nodesInFloor.filter(n => n.position === 'center');
         const rightNodes = nodesInFloor.filter(n => n.position === 'right');
@@ -414,23 +439,23 @@ function renderMap() {
             const nodeEqs = buildingData.equipments.filter(eq => eq.nodeId === node.id);
             const eqCount = nodeEqs.length;
             const hasIsp = nodeEqs.some(eq => eq.isp && eq.isp.trim() !== '');
-            
+
             const card = document.createElement('div');
-            
+
             let extraClass = '';
-            if(node.type === 'Corridor') extraClass = 'corridor-node';
-            if(node.type === 'Staircase') extraClass = 'staircase-node';
-            if(hasIsp) extraClass += ' has-isp-room';
-            
+            if (node.type === 'Corridor') extraClass = 'corridor-node';
+            if (node.type === 'Staircase') extraClass = 'staircase-node';
+            if (hasIsp) extraClass += ' has-isp-room';
+
             card.className = `room-card ${extraClass} status-${node.status}`;
-            
+
             let icon = '';
-            if(node.type === 'Corridor') icon = '🚪 ';
-            if(node.type === 'Staircase') icon = '🪜 ';
-            
+            if (node.type === 'Corridor') icon = '🚪 ';
+            if (node.type === 'Staircase') icon = '🪜 ';
+
             card.innerHTML = `<div class="room-name" title="${node.name}">${icon}${node.name}</div><div class="room-eq-count">💻 ${eqCount}</div>`;
             card.addEventListener('click', () => openRoomDrawer(node.id));
-            
+
             scrollDiv.appendChild(card);
         });
 
@@ -451,11 +476,11 @@ function renderMap() {
 function openRoomDrawer(nodeId) {
     currentSelectedNodeId = nodeId;
     const node = buildingData.nodes.find(n => n.id === nodeId);
-    if(!node) return;
+    if (!node) return;
 
     drawerRoomNameInput.value = node.name;
     roomCompletedToggle.checked = node.status === 2; // Xanh là checked
-    
+
     // Style toggle area dựa trên trạng thái
     updateToggleUI();
 
@@ -467,14 +492,14 @@ function openRoomDrawer(nodeId) {
 // Xử lý đổi tên phòng trực tiếp trên Input
 drawerRoomNameInput.addEventListener('change', (e) => {
     const newName = e.target.value.trim();
-    if(!newName) return;
-    
+    if (!newName) return;
+
     const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
-    if(node && node.name !== newName) {
+    if (node && node.name !== newName) {
         node.name = newName;
         renderMap();
         saveBuildingDataLocally();
-        saveSuggestion('rooms', newName); // Lưu lịch sử tên phòng
+        // Không lưu tự động vào danh mục gợi ý nữa để user tự quản lý trong bảng "Danh mục"
         showToast("Đã lưu tên khu vực!");
     }
 });
@@ -499,8 +524,8 @@ btnCloseDrawer.addEventListener('click', () => {
 roomCompletedToggle.addEventListener('change', (e) => {
     updateToggleUI();
     const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
-    if(node) {
-        if(e.target.checked) {
+    if (node) {
+        if (e.target.checked) {
             node.status = 2; // Hoàn thành
         } else {
             // Nếu hủy hoàn thành, kiểm tra xem có thiết bị không
@@ -517,7 +542,7 @@ roomCompletedToggle.addEventListener('change', (e) => {
 function renderEquipmentsInDrawer(nodeId) {
     const eqs = buildingData.equipments.filter(e => e.nodeId === nodeId);
     equipmentCountBadge.innerText = eqs.length;
-    
+
     if (eqs.length === 0) {
         equipmentsList.innerHTML = `<div class="empty-state">Phòng này chưa ghi nhận thiết bị.<br>Bấm "+ Thêm" để khai báo.</div>`;
         return;
@@ -553,7 +578,7 @@ btnCloseEqModal.addEventListener('click', () => {
 
 equipmentForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const newEq = {
         id: 'eq_' + Date.now(),
         nodeId: currentSelectedNodeId,
@@ -572,10 +597,11 @@ equipmentForm.addEventListener('submit', (e) => {
     saveSuggestion('eqModels', newEq.model);
     saveSuggestion('eqLocations', newEq.exactLocation);
     saveSuggestion('eqISPs', newEq.isp);
+    saveSuggestion('eqPurposes', newEq.purpose);
 
     // Auto-update room status to ORANGE if not green
     const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
-    if(node && node.status === 0) {
+    if (node && node.status === 0) {
         node.status = 1; // Đang làm
         roomCompletedToggle.checked = false;
         updateToggleUI();
@@ -590,17 +616,17 @@ equipmentForm.addEventListener('submit', (e) => {
 });
 
 // Xóa thiết bị (Gắn ở inline window context)
-window.deleteEquipment = function(eqId) {
-    if(confirm("Xóa thiết bị này?")) {
+window.deleteEquipment = function (eqId) {
+    if (confirm("Xóa thiết bị này?")) {
         buildingData.equipments = buildingData.equipments.filter(e => e.id !== eqId);
-        
+
         // Kiểm tra hạ cấp trạng thái nếu hết thiết bị
         const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
-        if(node && node.status === 1) { // Nếu đang cam
+        if (node && node.status === 1) { // Nếu đang cam
             const eqCount = buildingData.equipments.filter(eq => eq.nodeId === node.id).length;
-            if(eqCount === 0) node.status = 0; // Về trắng
+            if (eqCount === 0) node.status = 0; // Về trắng
         }
-        
+
         renderEquipmentsInDrawer(currentSelectedNodeId);
         renderMap();
         saveBuildingDataLocally(); // Auto save
@@ -616,45 +642,45 @@ function showToast(msg) {
     var toast = document.getElementById("toast");
     toast.innerText = msg;
     toast.className = "toast show";
-    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+    setTimeout(function () { toast.className = toast.className.replace("show", ""); }, 3000);
 }
 
 // Tính năng thêm Tầng
-window.addNewFloor = function() {
+window.addNewFloor = function () {
     let maxFloor = 0;
     buildingData.nodes.forEach(n => {
-        if(n.floor > maxFloor) maxFloor = n.floor;
+        if (n.floor > maxFloor) maxFloor = n.floor;
     });
     const nextFloor = maxFloor + 1;
     let maxNodeId = 0;
     buildingData.nodes.forEach(n => {
-        const idNum = parseInt(n.id.replace('node_',''));
-        if(!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
+        const idNum = parseInt(n.id.replace('node_', ''));
+        if (!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
     });
-    
+
     buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Corridor', name: `Hành lang Tầng ${nextFloor}`, status: 0, position: 'center' });
     buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Staircase', name: `Cầu thang Tầng ${nextFloor}`, status: 0, position: 'center' });
     buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Room', name: `P.${nextFloor}01`, status: 0, position: 'left' });
     buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Room', name: `P.${nextFloor}02`, status: 0, position: 'right' });
-    
+
     renderMap();
     saveBuildingDataLocally();
     showToast(`Đã thêm Tầng ${nextFloor} Mới!`);
 }
 
 // Tính năng xóa Tầng
-window.deleteFloor = function(floorNum) {
-    if(confirm(`Xác nhận XÓA TOÀN BỘ TẦNG ${floorNum}? Cả thiết bị sẽ bị xóa!`)) {
+window.deleteFloor = function (floorNum) {
+    if (confirm(`Xác nhận XÓA TOÀN BỘ TẦNG ${floorNum}? Cả thiết bị sẽ bị xóa!`)) {
         const nodesToDelete = buildingData.nodes.filter(n => n.floor === floorNum).map(n => n.id);
         buildingData.nodes = buildingData.nodes.filter(n => n.floor !== floorNum);
         buildingData.equipments = buildingData.equipments.filter(eq => !nodesToDelete.includes(eq.nodeId));
-        
+
         // Cập nhật currentSelectedNodeId nếu bị xóa
-        if(nodesToDelete.includes(currentSelectedNodeId)) {
+        if (nodesToDelete.includes(currentSelectedNodeId)) {
             roomDrawer.classList.remove('active');
             currentSelectedNodeId = null;
         }
-        
+
         renderMap();
         saveBuildingDataLocally();
         showToast(`Đã xóa Tầng ${floorNum}!`);
@@ -662,17 +688,17 @@ window.deleteFloor = function(floorNum) {
 }
 
 // Nút Thêm phòng ở Tầng
-window.addRoom = function(floorNum, position) {
+window.addRoom = function (floorNum, position) {
     let name = prompt(`Nhập Tên Phòng Mới (Tầng ${floorNum} - Bên ${position === 'left' ? 'Trái' : 'Phải'}):`, 'Phòng Mới');
-    if(!name) return;
+    if (!name) return;
     name = name.trim();
-    
+
     let maxNodeId = 0;
     buildingData.nodes.forEach(n => {
-        const idNum = parseInt(n.id.replace('node_',''));
-        if(!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
+        const idNum = parseInt(n.id.replace('node_', ''));
+        if (!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
     });
-    
+
     buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: floorNum, type: 'Room', name: name, status: 0, position: position });
     renderMap();
     saveBuildingDataLocally();
@@ -680,18 +706,73 @@ window.addRoom = function(floorNum, position) {
 }
 
 // Nút xóa phòng
-window.deleteCurrentRoom = function() {
-    if(!currentSelectedNodeId) return;
+window.deleteCurrentRoom = function () {
+    if (!currentSelectedNodeId) return;
     const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
-    if(confirm(`Xác nhận xóa: ${node.name}? Thiết bị ở trong cũng bị xóa.`)) {
+    if (confirm(`Xác nhận xóa: ${node.name}? Thiết bị ở trong cũng bị xóa.`)) {
         buildingData.nodes = buildingData.nodes.filter(n => n.id !== currentSelectedNodeId);
         buildingData.equipments = buildingData.equipments.filter(e => e.nodeId !== currentSelectedNodeId);
-        
+
         roomDrawer.classList.remove('active');
         currentSelectedNodeId = null;
-        
+
         renderMap();
         saveBuildingDataLocally();
         showToast("Đã xóa Khu vực!");
     }
 }
+
+/* === Room Directory Modal Logic === */
+const roomDirectoryModal = document.getElementById("roomDirectoryModal");
+const btnCloseRoomDirModal = document.getElementById("btnCloseRoomDirModal");
+const roomDirectoryTableBody = document.getElementById("roomDirectoryTableBody");
+const newRoomDirName = document.getElementById("newRoomDirName");
+
+window.openRoomDirectoryModal = function () {
+    roomDirectoryModal.classList.add('active');
+    renderRoomDirectory();
+};
+
+if (btnCloseRoomDirModal) {
+    btnCloseRoomDirModal.addEventListener('click', () => {
+        roomDirectoryModal.classList.remove('active');
+    });
+}
+
+function renderRoomDirectory() {
+    if (!roomDirectoryTableBody) return;
+    roomDirectoryTableBody.innerHTML = '';
+    userSuggestions.rooms.forEach((room, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="padding: 8px; border-bottom: 1px solid #cbd5e1;">${room}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right;">
+                <button onclick="deleteRoomFromDirectory(${index})" style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;" title="Xóa">&times;</button>
+            </td>
+        `;
+        roomDirectoryTableBody.appendChild(tr);
+    });
+}
+
+window.addRoomToDirectory = function () {
+    if (!newRoomDirName) return;
+    const val = newRoomDirName.value.trim();
+    if (val && !userSuggestions.rooms.includes(val)) {
+        userSuggestions.rooms.push(val);
+        suggestionsRef.child('rooms').set(userSuggestions.rooms);
+        newRoomDirName.value = '';
+        renderRoomDirectory();
+        populateDataLists();
+        showToast("Đã thêm tên phòng vào danh mục");
+    }
+};
+
+window.deleteRoomFromDirectory = function (index) {
+    if (confirm("Bạn có chắc muốn xóa tên phòng này khỏi danh mục gợi ý?")) {
+        userSuggestions.rooms.splice(index, 1);
+        suggestionsRef.child('rooms').set(userSuggestions.rooms);
+        renderRoomDirectory();
+        populateDataLists();
+        showToast("Đã xóa tên phòng khỏi danh mục");
+    }
+};

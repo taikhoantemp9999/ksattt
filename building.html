@@ -1,46 +1,57 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Khảo sát Tòa nhà & Phòng ban</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="building.css">
-    
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
             <div class="header-back">
                 <a href="#" id="btnBackToMain" class="back-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
                 </a>
                 <h1 id="customerNameHeader">Khảo sát Tòa nhà</h1>
             </div>
             <div class="header-actions" style="display: flex; gap: 8px;">
-                <button type="button" id="btnBackToList" class="action-btn" style="background: rgba(255,255,255,0.2); display: none;">← Về Danh sách</button>
-                <button type="button" id="btnSaveBuildingMap" class="action-btn save-btn" style="display: none;">Lưu</button>
+                <button type="button" id="btnBackToList" class="action-btn"
+                    style="background: rgba(255,255,255,0.2); display: none;">← Về Danh sách</button>
+                <button type="button" id="btnSaveBuildingMap" class="action-btn save-btn"
+                    style="display: none;">Lưu</button>
             </div>
         </header>
 
         <main>
             <!-- Buildings List View -->
             <section id="buildingsListSection" class="form-section card">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px;">
                     <h2 style="margin:0; border:none; padding:0; font-size:1.15rem;">Danh sách Tòa nhà</h2>
-                    <button type="button" id="btnShowSetup" class="primary-btn" style="width:auto; padding:8px 12px; font-size:0.85rem;">+ Thêm mới</button>
+                    <button type="button" id="btnShowSetup" class="primary-btn"
+                        style="width:auto; padding:8px 12px; font-size:0.85rem;">+ Thêm mới</button>
                 </div>
                 <!-- Container for Multiple Buildings -->
                 <div id="buildingsListContainer" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Rendered via JS -->
                 </div>
-                
+
                 <!-- Zero State -->
-                <div id="buildingsZeroState" style="text-align: center; padding: 30px 10px; color: #94a3b8; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; display: none;">
+                <div id="buildingsZeroState"
+                    style="text-align: center; padding: 30px 10px; color: #94a3b8; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; display: none;">
                     Chưa có Tòa nhà nào được khai báo.<br>Bấm "+ Thêm mới" để bắt đầu.
                 </div>
             </section>
@@ -48,7 +59,8 @@
             <!-- Setup Form -->
             <section id="setupSection" class="form-section card" style="display: none;">
                 <h2>Khởi tạo Tòa nhà nhanh</h2>
-                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">Tạo sơ đồ các tầng và phòng ban để bắt đầu nhập liệu thiết bị.</p>
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">Tạo sơ đồ các tầng và phòng ban để
+                    bắt đầu nhập liệu thiết bị.</p>
                 <div class="input-group">
                     <label>Tên Tòa nhà</label>
                     <input type="text" id="buildingName" placeholder="VD: Tòa nhà A, Khu C..." value="Tòa A">
@@ -78,7 +90,9 @@
                 <div class="map-header">
                     <div>
                         <h2 id="displayBuildingName">Tòa A</h2>
-                        <button type="button" class="action-btn" onclick="addNewFloor()" style="background:#0284c7; color:#fff; font-size:0.85rem; padding:4px 10px; margin-top:8px; display:inline-flex; align-items:center; border:none; border-radius:4px; font-weight:600; cursor:pointer;">+ Thêm Tầng Mới</button>
+                        <button type="button" class="action-btn" onclick="addNewFloor()"
+                            style="background:#0284c7; color:#fff; font-size:0.85rem; padding:4px 10px; margin-top:8px; display:inline-flex; align-items:center; border:none; border-radius:4px; font-weight:600; cursor:pointer;">+
+                            Thêm Tầng Mới</button>
                     </div>
                     <div class="legend">
                         <span class="legend-item"><span class="dot dot-white"></span>Chưa rà soát</span>
@@ -97,28 +111,31 @@
     <!-- Bottom Sheet / Drawer for Room Interaction -->
     <div id="roomDrawer" class="drawer-overlay">
         <div class="drawer-content">
-            <div class="drawer-header" style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div class="drawer-header"
+                style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
                 <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; padding-right:12px;">
-                        <input type="text" id="drawerRoomNameInput" list="roomNameSuggestions" 
-                           style="margin: 0; word-break: break-word; font-size: 1.2rem; font-weight: 600; color: var(--primary); border: 1px dashed transparent; background: transparent; padding: 4px; border-radius: 4px; width: 100%; transition: border 0.2s;"
-                           placeholder="Nhập tên phòng...">
-                        <button onclick="deleteCurrentRoom()" style="background:transparent; border:none; color:#ef4444; font-size:1.4rem; padding:0 8px; cursor:pointer;" title="Xóa khu vực này">🗑️</button>
+                    <div style="display: flex; align-items: center; gap: 4px; flex: 1; padding-right:12px;">
+                        <input type="text" id="drawerRoomNameInput" list="roomNameSuggestions"
+                            style="margin: 0; word-break: break-word; font-size: 1.2rem; font-weight: 600; color: var(--primary); border: 1px dashed transparent; background: transparent; padding: 4px; border-radius: 4px; width: 100%; transition: border 0.2s;"
+                            placeholder="Nhập tên phòng...">
+                        <button
+                            onclick="document.getElementById('drawerRoomNameInput').value=''; document.getElementById('drawerRoomNameInput').focus();"
+                            style="background:transparent; border:none; font-size:1.4rem; padding:0 4px; cursor:pointer;"
+                            title="Xóa nhanh tên phòng">&times;</button>
+                        <button onclick="openRoomDirectoryModal()"
+                            style="background:transparent; border:none; font-size:1.2rem; padding:0 4px; cursor:pointer;"
+                            title="Biên tập danh mục tên phòng">⚙️</button>
+                        <button onclick="deleteCurrentRoom()"
+                            style="background:transparent; border:none; color:#ef4444; font-size:1.4rem; padding:0 4px; cursor:pointer;"
+                            title="Xóa khu vực này">🗑️</button>
                     </div>
                     <button id="btnCloseDrawer" class="close-btn">&times;</button>
                 </div>
             </div>
-            
+
             <!-- Danh sách gợi ý từ lịch sử -->
             <datalist id="roomNameSuggestions">
-                <option value="Phòng Kế toán">
-                <option value="Phòng Chủ tịch">
-                <option value="Phòng Phó Chủ tịch">
-                <option value="Phòng Tiếp dân">
-                <option value="Phòng Tư pháp">
-                <option value="Phòng Địa chính">
-                <option value="Công an xã">
-                <option value="Kho">
+                <!-- Được JS populate -->
             </datalist>
             <div class="drawer-body">
                 <!-- Status Toggle -->
@@ -159,7 +176,8 @@
                     <input type="hidden" id="eqId">
                     <div class="input-group">
                         <label>Tên thiết bị <span class="required">*</span></label>
-                        <input type="text" id="eqName" required list="eqNameSuggestions" placeholder="VD: Router Cisco, Switch PoE, Máy tính để bàn">
+                        <input type="text" id="eqName" required list="eqNameSuggestions"
+                            placeholder="VD: Router Cisco, Switch PoE, Máy tính để bàn">
                         <datalist id="eqNameSuggestions">
                             <option value="Máy tính để bàn (PC)">
                             <option value="Máy tính xách tay (Laptop)">
@@ -172,14 +190,16 @@
                     </div>
                     <div class="input-group">
                         <label>Model / Phân loại (Nếu có)</label>
-                        <input type="text" id="eqModel" list="eqModelSuggestions" placeholder="VD: FPT Wifi, Cisco, HP, Dell">
+                        <input type="text" id="eqModel" list="eqModelSuggestions"
+                            placeholder="VD: FPT Wifi, Cisco, HP, Dell">
                         <datalist id="eqModelSuggestions">
                             <!-- Sẽ được populate tự động bằng JS từ lịch sử -->
                         </datalist>
                     </div>
                     <div class="input-group">
                         <label>Vị trí chi tiết trên thực tế</label>
-                        <input type="text" id="eqExactLocation" list="eqLocationSuggestions" placeholder="VD: Chân bàn, Tủ mạng">
+                        <input type="text" id="eqExactLocation" list="eqLocationSuggestions"
+                            placeholder="VD: Chân bàn, Tủ mạng">
                         <datalist id="eqLocationSuggestions">
                             <option value="Trên bàn làm việc">
                             <option value="Dưới gầm bàn">
@@ -187,9 +207,11 @@
                             <option value="Treo trần nhà">
                         </datalist>
                     </div>
-                    <div class="input-group" style="border-left: 3px solid #0284c7; padding-left: 8px; margin-top: 12px; background: rgba(2, 132, 199, 0.05); padding: 8px; border-radius: 4px;">
+                    <div class="input-group"
+                        style="border-left: 3px solid #0284c7; padding-left: 8px; margin-top: 12px; background: rgba(2, 132, 199, 0.05); padding: 8px; border-radius: 4px;">
                         <label style="color: #0284c7; font-weight: 600;">🌐 Đường truyền Internet (ISP) - Nếu có</label>
-                        <input type="text" id="eqISP" list="eqISPSuggestions" placeholder="VD: VNPT, Viettel, FPT Telecom...">
+                        <input type="text" id="eqISP" list="eqISPSuggestions"
+                            placeholder="VD: VNPT, Viettel, FPT Telecom...">
                         <datalist id="eqISPSuggestions">
                             <option value="VNPT">
                             <option value="Viettel">
@@ -199,19 +221,55 @@
                     </div>
                     <div class="input-group">
                         <label>Mục đích sử dụng</label>
-                        <input type="text" id="eqPurpose" placeholder="VD: Cấp mạng phòng Kế toán">
+                        <input type="text" id="eqPurpose" list="eqPurposeSuggestions"
+                            placeholder="VD: Cấp mạng phòng Kế toán">
+                        <datalist id="eqPurposeSuggestions">
+                            <option value="Wifi">
+                            <option value="Switch chia mạng">
+                        </datalist>
                     </div>
                     <div class="input-group">
                         <label>Ghi chú thêm</label>
                         <textarea id="eqNotes" rows="2" placeholder="Tình trạng hỏng hóc, nhãn dán..."></textarea>
                     </div>
-                    <button type="submit" class="submit-btn mt-3" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600;">Lưu Thiết Bị</button>
+                    <button type="submit" class="submit-btn mt-3"
+                        style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600;">Lưu
+                        Thiết Bị</button>
                 </form>
             </div>
         </div>
     </div>
     <div id="toast" class="toast">Đã lưu!</div>
 
+    <!-- Room Directory Modal -->
+    <div id="roomDirectoryModal" class="modal">
+        <div class="modal-content" style="max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3>Danh mục Tên Phòng</h3>
+                <button class="close-btn" id="btnCloseRoomDirModal">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <input type="text" id="newRoomDirName" placeholder="Tên phòng mới..."
+                        style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <button class="primary-btn" onclick="addRoomToDirectory()"
+                        style="width: auto; padding: 8px 16px;">Thêm</button>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: left;">Tên phòng</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 60px;">
+                                Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomDirectoryTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <script src="building.js"></script>
 </body>
+
 </html>
