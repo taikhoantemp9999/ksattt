@@ -96,6 +96,22 @@ document.addEventListener('DOMContentLoaded', () => {
             closeManageHtttModal();
         }
     }
+
+    // Logic Ẩn hiện ô nhập thiết bị tường lửa
+    const tuongLuaCheckbox = document.getElementById('co_trien_khai_tuong_lua');
+    const firewallWrapper = document.getElementById('firewallDeviceWrapper');
+
+    if (tuongLuaCheckbox) {
+        tuongLuaCheckbox.addEventListener('change', function () {
+            if (this.checked) {
+                firewallWrapper.style.display = 'flex';
+                firewallWrapper.style.flexDirection = 'column'; // Hoặc block tùy CSS
+            } else {
+                firewallWrapper.style.display = 'none';
+                document.getElementById('thiet_bi_tuong_lua').value = '';
+            }
+        });
+    }
 });
 
 function getSurveys() {
@@ -105,11 +121,11 @@ function getSurveys() {
 // Render checkboxes HTTT
 function renderHtttCheckboxes(forceCheckAll = false, newlyAddedItem = null) {
     const container = document.getElementById('htttList');
-    
+
     // Ghi nhớ lại những ô nào đang được check trên màn hình (để khi vẽ lại không bị mất)
     const checkedValues = new Set();
     const existingCheckboxes = container.querySelectorAll('input[type="checkbox"]');
-    
+
     // Nếu màn hình đã có checkbox (tức là đang sửa/thêm dở), ta lưu lại trạng thái của những ô đang tick
     if (existingCheckboxes.length > 0 && !forceCheckAll) {
         existingCheckboxes.forEach(cb => {
@@ -127,15 +143,15 @@ function renderHtttCheckboxes(forceCheckAll = false, newlyAddedItem = null) {
         input.type = 'checkbox';
         input.name = `he_thong_thong_tin`;
         input.value = item;
-        
+
         // Tick ô này khi:
         // 1. Lần đầu mở form hoặc Reset form (forceCheckAll = true)
         // 2. Ô này vừa được user bấm Thêm mới (newlyAddedItem)
         // 3. Trong trường hợp đang vẽ lại list (do thêm mới/xoá), nếu ô này TRƯỚC ĐÓ ĐANG ĐƯỢC TICK thì tick lại.
         //     * Ngoại lệ: Nếu màn hình chưa có gì (existingCheckboxes.length === 0) thì mặc định tick hết như lần đầu.
         if (
-            forceCheckAll || 
-            item === newlyAddedItem || 
+            forceCheckAll ||
+            item === newlyAddedItem ||
             (existingCheckboxes.length > 0 && checkedValues.has(item)) ||
             (existingCheckboxes.length === 0)
         ) {
@@ -181,7 +197,8 @@ function getFormData() {
             he_thong_mang_lan: formData.get('ha_tang_thiet_bi.he_thong_mang_lan') ? true : false,
             co_thi_cong_mang_lan: formData.get('ha_tang_thiet_bi.co_thi_cong_mang_lan') ? true : false,
             tuong_lua: formData.get('ha_tang_thiet_bi.tuong_lua') ? true : false,
-            co_trien_khai_tuong_lua: formData.get('ha_tang_thiet_bi.co_trien_khai_tuong_lua') ? true : false
+            co_trien_khai_tuong_lua: formData.get('ha_tang_thiet_bi.co_trien_khai_tuong_lua') ? true : false,
+            thiet_bi_tuong_lua: formData.get('ha_tang_thiet_bi.thiet_bi_tuong_lua') || ""
         },
         he_thong_thong_tin: htttArray,
         thong_tin_lien_he: {
@@ -246,6 +263,7 @@ function handleFormSubmit(e) {
             .then(() => {
                 showToast('Đã thêm mới thành công!');
                 e.target.reset();
+                document.getElementById('firewallDeviceWrapper').style.display = 'none'; // Ẩn ô tường lửa sau khi submit
                 document.getElementById('don_vi_khao_sat').focus();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             })
@@ -286,7 +304,16 @@ function loadSurveyToForm(id) {
     form.elements['ha_tang_thiet_bi.he_thong_mang_lan'].checked = survey.ha_tang_thiet_bi.he_thong_mang_lan;
     form.elements['ha_tang_thiet_bi.co_thi_cong_mang_lan'].checked = survey.ha_tang_thiet_bi.co_thi_cong_mang_lan;
     form.elements['ha_tang_thiet_bi.tuong_lua'].checked = survey.ha_tang_thiet_bi.tuong_lua;
-    form.elements['ha_tang_thiet_bi.co_trien_khai_tuong_lua'].checked = survey.ha_tang_thiet_bi.co_trien_khai_tuong_lua;
+
+    const tuongLuaCheckbox = document.getElementById('co_trien_khai_tuong_lua');
+    tuongLuaCheckbox.checked = survey.ha_tang_thiet_bi.co_trien_khai_tuong_lua;
+
+    // Tên thiết bị tường lửa
+    const tbTuongLua = document.getElementById('thiet_bi_tuong_lua');
+    if (tbTuongLua) tbTuongLua.value = survey.ha_tang_thiet_bi.thiet_bi_tuong_lua || "";
+
+    // Trigger sự kiện thay đổi để hiện ô nhập
+    tuongLuaCheckbox.dispatchEvent(new Event('change'));
 
     // Checkbox HTTT
     const httts = form.elements['he_thong_thong_tin'];
@@ -334,11 +361,14 @@ function cancelEdit() {
     document.getElementById('surveyForm').reset();
     document.getElementById('editId').value = "";
 
+    // Ẩn wrapper firewall
+    document.getElementById('firewallDeviceWrapper').style.display = 'none';
+
     // Reset lại checkbox (false: không tick sẵn cái nào) khi về form thêm mới
-    renderHtttCheckboxes(false); 
+    renderHtttCheckboxes(false);
 
     document.getElementById('editAlert').style.display = 'none';
-    
+
     // Ẩn nút Sơ đồ tòa nhà
     document.getElementById('buildingSurveyWrapper').style.display = 'none';
 
@@ -350,17 +380,22 @@ function cancelEdit() {
 // Xóa một survey
 function deleteSurvey(id) {
     if (confirm("Bạn có chắc chắn xóa bản ghi này?")) {
-        surveysRef.child(id).remove()
-            .then(() => {
-                // Nếu đang sửa thằng này thì hủy sửa
-                if (document.getElementById('editId').value === id) {
-                    cancelEdit();
-                }
-                showToast("Đã xóa bản ghi!");
-            })
-            .catch((error) => {
-                showToast("Lỗi khi xóa: " + error.message, 'error');
-            });
+        const password = prompt("Nhập mật khẩu để thực hiện chức năng xóa:");
+        if (password === "Vnpt@2026") {
+            surveysRef.child(id).remove()
+                .then(() => {
+                    // Nếu đang sửa thằng này thì hủy sửa
+                    if (document.getElementById('editId').value === id) {
+                        cancelEdit();
+                    }
+                    showToast("Đã xóa bản ghi!");
+                })
+                .catch((error) => {
+                    showToast("Lỗi khi xóa: " + error.message, 'error');
+                });
+        } else {
+            showToast("Mật khẩu không đúng. Hủy thao tác xóa.", "error");
+        }
     }
 }
 
@@ -370,14 +405,19 @@ function clearAllData() {
     if (surveys.length === 0) return;
 
     if (confirm(`Bạn có chắc muốn xóa TẤT CẢ ${surveys.length} bản ghi trên Cơ sở dữ liệu? Hành động này không thể hoàn tác!`)) {
-        surveysRef.remove()
-            .then(() => {
-                cancelEdit();
-                showToast('Đã xóa tất cả dữ liệu từ Firebase!');
-            })
-            .catch((error) => {
-                showToast("Lỗi khi xóa: " + error.message, 'error');
-            });
+        const password = prompt("Nhập mật khẩu để thực hiện chức năng xóa:");
+        if (password === "Vnpt@2026") {
+            surveysRef.remove()
+                .then(() => {
+                    cancelEdit();
+                    showToast('Đã xóa tất cả dữ liệu từ Firebase!');
+                })
+                .catch((error) => {
+                    showToast("Lỗi khi xóa: " + error.message, 'error');
+                });
+        } else {
+            showToast("Mật khẩu không đúng. Hủy thao tác xóa.", "error");
+        }
     }
 }
 
@@ -466,8 +506,9 @@ function flattenSurvey(survey) {
         "Đã thi công Mạng Lan": survey.ha_tang_thiet_bi.co_thi_cong_mang_lan ? "Có" : "Không",
         "Tường lửa": survey.ha_tang_thiet_bi.tuong_lua ? "Có" : "Không",
         "Đã triển khai tường lửa": survey.ha_tang_thiet_bi.co_trien_khai_tuong_lua ? "Có" : "Không",
+        "Tên TB Tường lửa": survey.ha_tang_thiet_bi.thiet_bi_tuong_lua || "",
 
-        "Hệ thống thông tin (đã chọn)": survey.he_thong_thong_tin.join("\n"),
+        "Hệ thống thông tin (đã chọn)": (survey.he_thong_thong_tin || []).join("\n"),
 
         "ĐM - Họ tên": survey.thong_tin_lien_he.dau_moi_cung_cap.ho_ten,
         "ĐM - SĐT": survey.thong_tin_lien_he.dau_moi_cung_cap.so_dien_thoai,
@@ -517,7 +558,7 @@ function closeManageHtttModal() {
 function renderManageHtttList() {
     const container = document.getElementById('manageHtttListContainer');
     container.innerHTML = '';
-    
+
     dynamicHtttList.forEach((item, index) => {
         const div = document.createElement('div');
         div.style.display = 'flex';
