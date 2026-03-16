@@ -186,69 +186,81 @@ function renderBuildingsDetailed(buildingsArray) {
                     <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; white-space: pre-wrap; margin-bottom: 10px;">${bldg.mainNetworkNotes || 'Không có ghi chú mạng chính.'}</div>
                 </div>
 
-                <h4 style="font-size: 1rem; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Danh sách thiết bị theo từng khu vực:</h4>
+                <h4 style="font-size: 1rem; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Danh sách thiết bị chi tiết:</h4>
         `;
 
-        // Gom nhóm thiết bị theo nodeId
-        const eqByNode = {};
-        if (bldg.equipments && Array.isArray(bldg.equipments)) {
-            bldg.equipments.forEach(eq => {
-                if (!eqByNode[eq.nodeId]) eqByNode[eq.nodeId] = [];
-                eqByNode[eq.nodeId].push(eq);
-            });
+        // Tạo map để lấy tên khu vực (node)
+        const nodeMap = {};
+        if (bldg.nodes && Array.isArray(bldg.nodes)) {
+            bldg.nodes.forEach(n => nodeMap[n.id] = n.name);
         }
 
-        // Duyệt qua các node (phòng/hành lang)
-        if (bldg.nodes && Array.isArray(bldg.nodes)) {
-            let hasAnyEquipment = false;
-            bldg.nodes.forEach(node => {
-                const nodeEqs = eqByNode[node.id];
-                if (nodeEqs && nodeEqs.length > 0) {
-                    hasAnyEquipment = true;
-                    buildingsHtml += `
-                        <div class="node-header">📍 ${node.name}</div>
-                        <table class="building-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 25%;">Tên thiết bị</th>
-                                    <th style="width: 20%;">Model</th>
-                                    <th style="width: 25%;">Vị trí chi tiết</th>
-                                    <th style="width: 30%;">Mục đích / ISP</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
+        // Tạo danh sách phẳng tất cả thiết bị
+        let allEqs = [];
+        if (bldg.equipments && Array.isArray(bldg.equipments)) {
+            allEqs = [...bldg.equipments];
+        }
 
-                    nodeEqs.forEach(eq => {
-                        const ispLabel = eq.isp ? `<span class="tag tag-isp">🌐 ISP: ${eq.isp}</span>` : '';
-                        const mainLabel = eq.isMainDevice ? `<span class="tag tag-main">🌟 Mạch chính</span>` : '';
-                        
-                        buildingsHtml += `
-                                    <tr>
-                                        <td>
-                                            <div style="font-weight: 600;">${eq.name}</div>
-                                            ${mainLabel}
-                                        </td>
-                                        <td>${eq.model || '-'}</td>
-                                        <td>${eq.exactLocation || '-'}</td>
-                                        <td>
-                                            <div>${eq.purpose || '-'}</div>
-                                            ${ispLabel}
-                                        </td>
-                                    </tr>
-                        `;
-                    });
+        // Sắp xếp thiết bị:
+        // 1. Ưu tiên thiết bị mạng chính (true trước)
+        // 2. Tên thiết bị (A-Z)
+        // 3. Model (A-Z)
+        allEqs.sort((a, b) => {
+            const aMain = a.isMainDevice ? 1 : 0;
+            const bMain = b.isMainDevice ? 1 : 0;
+            if (aMain !== bMain) return bMain - aMain; // 1 trước 0
+            
+            const aName = (a.name || '').toLowerCase();
+            const bName = (b.name || '').toLowerCase();
+            if (aName !== bName) return aName.localeCompare(bName);
+            
+            const aModel = (a.model || '').toLowerCase();
+            const bModel = (b.model || '').toLowerCase();
+            return aModel.localeCompare(bModel);
+        });
 
-                    buildingsHtml += `
-                                </tbody>
-                            </table>
-                    `;
-                }
+        if (allEqs.length > 0) {
+            buildingsHtml += `
+                <table class="building-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Khu vực / Tên thiết bị</th>
+                            <th style="width: 20%;">Model</th>
+                            <th style="width: 25%;">Vị trí chi tiết</th>
+                            <th style="width: 30%;">Mục đích / ISP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            allEqs.forEach(eq => {
+                const nodeName = nodeMap[eq.nodeId] || 'Không xác định';
+                const ispLabel = eq.isp ? `<span class="tag tag-isp">🌐 ISP: ${eq.isp}</span>` : '';
+                const mainLabel = eq.isMainDevice ? `<span class="tag tag-main">🌟 Mạch chính</span>` : '';
+                
+                buildingsHtml += `
+                            <tr>
+                                <td>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">📍 ${nodeName}</div>
+                                    <div style="font-weight: 600;">${eq.name}</div>
+                                    ${mainLabel}
+                                </td>
+                                <td>${eq.model || '-'}</td>
+                                <td>${eq.exactLocation || '-'}</td>
+                                <td>
+                                    <div>${eq.purpose || '-'}</div>
+                                    ${ispLabel}
+                                </td>
+                            </tr>
+                `;
             });
 
-            if (!hasAnyEquipment) {
-                buildingsHtml += `<div class="empty-state" style="padding: 10px;">Tòa nhà này chưa có thông tin thiết bị chi tiết.</div>`;
-            }
+            buildingsHtml += `
+                        </tbody>
+                    </table>
+            `;
+        } else {
+            buildingsHtml += `<div class="empty-state" style="padding: 10px;">Tòa nhà này chưa có thông tin thiết bị chi tiết.</div>`;
         }
 
         buildingsHtml += `</div>`; // Đóng detail-card của building
