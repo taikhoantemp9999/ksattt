@@ -11,9 +11,18 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
+let currentSurveyData = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
+
+    const btnExport = document.getElementById('btnExportEquipmentExcel');
+    if (btnExport) {
+        btnExport.addEventListener('click', () => {
+            exportEquipmentExcel(currentSurveyData);
+        });
+    }
 
     if (!id) {
         document.getElementById('detailContent').innerHTML = '<div class="empty-state">Không tìm thấy ID khảo sát.</div>';
@@ -26,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('detailContent').innerHTML = '<div class="empty-state">Dữ liệu không tồn tại hoặc đã bị xóa.</div>';
             return;
         }
+        currentSurveyData = data;
         renderDetail(data);
     });
 });
@@ -174,6 +184,9 @@ function renderBuildingsDetailed(buildingsArray) {
         return '';
     }
 
+    const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
+    const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
+
     let buildingsHtml = '<div class="section-header">VI. SƠ ĐỒ TÒA NHÀ & CHI TIẾT THIẾT BỊ</div>';
 
     buildingsArray.forEach((bldg, index) => {
@@ -186,7 +199,7 @@ function renderBuildingsDetailed(buildingsArray) {
                     <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; white-space: pre-wrap; margin-bottom: 10px;">${bldg.mainNetworkNotes || 'Không có ghi chú mạng chính.'}</div>
                 </div>
 
-                <h4 style="font-size: 1rem; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Danh sách thiết bị chi tiết:</h4>
+                <h4 style="font-size: 1rem; color: var(--text-main); margin: 6px 0 12px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Sơ đồ tòa nhà (theo tầng):</h4>
         `;
 
         // Tạo map để lấy tên khu vực (node)
@@ -194,6 +207,80 @@ function renderBuildingsDetailed(buildingsArray) {
         if (bldg.nodes && Array.isArray(bldg.nodes)) {
             bldg.nodes.forEach(n => nodeMap[n.id] = n.name);
         }
+
+        // ===== Render sơ đồ theo đúng "thẻ" như building.html =====
+        const nodes = Array.isArray(bldg.nodes) ? bldg.nodes : [];
+        const eqs = Array.isArray(bldg.equipments) ? bldg.equipments : [];
+
+        // Gom nhóm node theo tầng
+        const floorsMap = {};
+        nodes.forEach(node => {
+            const floor = Number(node.floor || 0);
+            if (!floorsMap[floor]) floorsMap[floor] = [];
+            floorsMap[floor].push(node);
+        });
+
+        const floorNums = Object.keys(floorsMap)
+            .map(k => Number(k))
+            .filter(n => !Number.isNaN(n))
+            .sort((a, b) => b - a); // giống building.js
+
+        if (floorNums.length > 0) {
+            buildingsHtml += `<div class="bldg-map"><div class="floors-container">`;
+
+            floorNums.forEach(floorNum => {
+                const nodesInFloor = floorsMap[floorNum] || [];
+                const leftNodes = nodesInFloor.filter(n => n.position === 'left');
+                const centerNodes = nodesInFloor.filter(n => n.position === 'center');
+                const rightNodes = nodesInFloor.filter(n => n.position === 'right');
+                const displayNodes = [...leftNodes, ...centerNodes, ...rightNodes];
+
+                buildingsHtml += `
+                    <div class="floor-row">
+                        <div class="floor-title">TẦNG ${floorNum}</div>
+                        <div class="floor-horizontal-scroll">
+                `;
+
+                displayNodes.forEach(node => {
+                    const nodeEqs = eqs.filter(eq => eq.nodeId === node.id);
+                    const eqCount = nodeEqs.length;
+                    const hasIsp = nodeEqs.some(eq => eq.isp && String(eq.isp).trim() !== '');
+                    const hasMainDev = nodeEqs.some(eq => isMainDevice(eq));
+
+                    let extraClass = '';
+                    if (node.type === 'Corridor') extraClass = 'corridor-node';
+                    if (node.type === 'Staircase') extraClass = 'staircase-node';
+                    if (hasIsp) extraClass += (extraClass ? ' ' : '') + 'has-isp-room';
+
+                    let icon = '';
+                    if (node.type === 'Corridor') icon = '🚪 ';
+                    if (node.type === 'Staircase') icon = '🪜 ';
+
+                    const customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
+                    const status = (node.status === 0 || node.status === 1 || node.status === 2) ? node.status : 0;
+
+                    buildingsHtml += `
+                        <div class="room-card ${extraClass} status-${status}" title="${safeStr(node.name)}">
+                            <div class="room-name" style="${customNameStyle}">${icon}${safeStr(node.name)}</div>
+                            <div class="room-eq-count">💻 ${eqCount}</div>
+                        </div>
+                    `;
+                });
+
+                buildingsHtml += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            buildingsHtml += `</div></div>`;
+        } else {
+            buildingsHtml += `<div class="empty-state" style="padding: 10px; margin-bottom: 10px;">Tòa nhà này chưa có sơ đồ khu vực (phòng/tầng).</div>`;
+        }
+
+        buildingsHtml += `
+                <h4 style="font-size: 1rem; color: var(--text-main); margin: 18px 0 12px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Danh sách thiết bị chi tiết:</h4>
+        `;
 
         // Tạo danh sách phẳng tất cả thiết bị
         let allEqs = [];
@@ -206,8 +293,8 @@ function renderBuildingsDetailed(buildingsArray) {
         // 2. Tên thiết bị (A-Z)
         // 3. Model (A-Z)
         allEqs.sort((a, b) => {
-            const aMain = a.isMainDevice ? 1 : 0;
-            const bMain = b.isMainDevice ? 1 : 0;
+            const aMain = isMainDevice(a) ? 1 : 0;
+            const bMain = isMainDevice(b) ? 1 : 0;
             if (aMain !== bMain) return bMain - aMain; // 1 trước 0
             
             const aName = (a.name || '').toLowerCase();
@@ -224,32 +311,32 @@ function renderBuildingsDetailed(buildingsArray) {
                 <table class="building-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">Khu vực / Tên thiết bị</th>
-                            <th style="width: 20%;">Model</th>
-                            <th style="width: 25%;">Vị trí chi tiết</th>
-                            <th style="width: 30%;">Mục đích / ISP</th>
+                            <th style="width: 6%;">STT</th>
+                            <th style="width: 34%;">Tên thiết bị, Model</th>
+                            <th style="width: 20%;">Vị trí</th>
+                            <th style="width: 40%;">Mục đích và Khu vực</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
 
-            allEqs.forEach(eq => {
+            allEqs.forEach((eq, idx) => {
                 const nodeName = nodeMap[eq.nodeId] || 'Không xác định';
-                const ispLabel = eq.isp ? `<span class="tag tag-isp">🌐 ISP: ${eq.isp}</span>` : '';
-                const mainLabel = eq.isMainDevice ? `<span class="tag tag-main">🌟 Mạch chính</span>` : '';
+                const mainLabel = isMainDevice(eq) ? `<span class="tag tag-main">🌟 Mạch chính</span>` : '';
+                const networkZone = (eq.isp && String(eq.isp).trim() !== '') ? 'Vùng mạng biên' : 'Vùng mạng nội bộ';
+                const nameModel = `${safeStr(eq.name)}${eq.model ? ` (${safeStr(eq.model)})` : ''}`;
                 
                 buildingsHtml += `
                             <tr>
+                                <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
                                 <td>
-                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">📍 ${nodeName}</div>
-                                    <div style="font-weight: 600;">${eq.name}</div>
+                                    <div style="font-weight: 700; color: #0f172a;">${nameModel || '-'}</div>
                                     ${mainLabel}
                                 </td>
-                                <td>${eq.model || '-'}</td>
-                                <td>${eq.exactLocation || '-'}</td>
+                                <td style="font-weight: 700; color: #334155;">${networkZone}</td>
                                 <td>
-                                    <div>${eq.purpose || '-'}</div>
-                                    ${ispLabel}
+                                    <div style="font-weight: 600; color: #334155;">🎯 ${safeStr(eq.purpose) || '-'}</div>
+                                    <div style="margin-top: 4px; font-size: 0.9rem; color: var(--text-muted);">📍 ${nodeName}</div>
                                 </td>
                             </tr>
                 `;
@@ -267,4 +354,87 @@ function renderBuildingsDetailed(buildingsArray) {
     });
 
     return buildingsHtml;
+}
+
+function exportEquipmentExcel(surveyData) {
+    if (!surveyData || !surveyData.buildingsArray || !Array.isArray(surveyData.buildingsArray)) {
+        alert("Chưa có dữ liệu tòa nhà/thiết bị để xuất.");
+        return;
+    }
+    if (typeof XLSX === 'undefined') {
+        alert("Thiếu thư viện xuất Excel (XLSX). Vui lòng kiểm tra kết nối mạng hoặc tải lại trang.");
+        return;
+    }
+
+    const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
+    const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
+
+    // Flatten toàn bộ thiết bị (thêm cột Tòa nhà & Khu vực)
+    const flat = [];
+    (surveyData.buildingsArray || []).forEach(bldg => {
+        const nodeMap = {};
+        if (bldg.nodes && Array.isArray(bldg.nodes)) {
+            bldg.nodes.forEach(n => nodeMap[n.id] = n.name);
+        }
+        const eqs = (bldg.equipments && Array.isArray(bldg.equipments)) ? bldg.equipments : [];
+        eqs.forEach(eq => {
+            flat.push({
+                building: safeStr(bldg.name),
+                name: safeStr(eq.name),
+                model: safeStr(eq.model),
+                isMain: isMainDevice(eq),
+                isp: safeStr(eq.isp),
+                purpose: safeStr(eq.purpose),
+                area: safeStr(nodeMap[eq.nodeId] || 'Không xác định')
+            });
+        });
+    });
+
+    if (flat.length === 0) {
+        alert("Không có thiết bị để xuất.");
+        return;
+    }
+
+    // Sort: mạng chính -> tên -> model (phụ: tòa nhà -> khu vực)
+    flat.sort((a, b) => {
+        const aMain = a.isMain ? 1 : 0;
+        const bMain = b.isMain ? 1 : 0;
+        if (aMain !== bMain) return bMain - aMain;
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        if (aName !== bName) return aName.localeCompare(bName);
+        const aModel = a.model.toLowerCase();
+        const bModel = b.model.toLowerCase();
+        if (aModel !== bModel) return aModel.localeCompare(bModel);
+        const aB = a.building.toLowerCase();
+        const bB = b.building.toLowerCase();
+        if (aB !== bB) return aB.localeCompare(bB);
+        return a.area.toLowerCase().localeCompare(b.area.toLowerCase());
+    });
+
+    // Xuất đúng “4 cột” như bảng + thêm Tòa nhà để tránh lẫn
+    const header = ["STT", "Tòa nhà", "Tên thiết bị, Model", "Vị trí", "Mục đích và Khu vực"];
+    const rows = flat.map((r, idx) => {
+        const nameModel = `${r.name}${r.model ? ` (${r.model})` : ''}`.trim();
+        const networkZone = r.isp && r.isp.trim() !== '' ? 'Vùng mạng biên' : 'Vùng mạng nội bộ';
+        const purposeArea = `${r.purpose || '-'} | ${r.area || '-'}`;
+        return [idx + 1, r.building || '-', nameModel || '-', networkZone, purposeArea];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    // Độ rộng cột tương đối
+    ws['!cols'] = [
+        { wch: 6 },
+        { wch: 20 },
+        { wch: 34 },
+        { wch: 18 },
+        { wch: 40 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DanhSachThietBi");
+
+    const org = safeStr(surveyData.don_vi_khao_sat).replace(/[\\/:*?"<>|]+/g, '').trim();
+    const fileName = `danh_sach_thiet_bi_${org || 'khao_sat'}.xlsx`;
+    XLSX.writeFile(wb, fileName);
 }
