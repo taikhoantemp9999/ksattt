@@ -1,0 +1,551 @@
+const HTTT_LIST = [
+    "Hệ thống Thư điện tử công vụ",
+    "Hệ thống Quản lý Văn bản tỉnh Phú Thọ (iOffice)",
+    "Hệ thống Trang thông tin điện tử",
+    "Hệ thống Một cửa điện tử",
+    "Hệ thống Cổng dịch vụ Quốc gia, Cổng dịch vụ công tỉnh",
+    "Phần mềm Hộ tịch, Thi đua khen thưởng",
+    "Quản lý cán bộ, công chức",
+    "Hệ thống quản lý hộ nghèo",
+    "Hệ thống quản lý tài sản công",
+    "Hệ thống quản lý lao động việc làm",
+    "Phần mềm báo cáo Cải cách hành chính",
+    "Kiểm soát thủ tục hành chính"
+];
+
+// Biến lưu trữ danh sách Hệ thống do người quản trị cấu hình
+let dynamicHtttList = JSON.parse(localStorage.getItem('CUSTOM_HTTT_MANAGER')) || [...HTTT_LIST];
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBxDaIIhmWJOB6w6Jg6Ch6a2-b_5HvJTWw",
+    authDomain: "english-fun-1937c.firebaseapp.com",
+    databaseURL: "https://english-fun-1937c-default-rtdb.firebaseio.com",
+    projectId: "english-fun-1937c",
+    storageBucket: "english-fun-1937c.firebasestorage.app",
+    messagingSenderId: "236020730818",
+    appId: "1:236020730818:web:4ebb378dc7a7005d2fa45b"
+};
+
+// Khởi tạo Firebase (Compat mode cho script.js cũ)
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const surveysRef = database.ref('surveys_ATTT');
+
+// Biến lưu trữ tại client
+let localSurveys = [];
+
+// Lắng nghe dữ liệu realtime từ Firebase
+surveysRef.on('value', (snapshot) => {
+    localSurveys = [];
+    snapshot.forEach((childSnapshot) => {
+        let data = childSnapshot.val();
+        data.id = childSnapshot.key; // Gắn ID thật trên cloud vào
+        localSurveys.push(data);
+    });
+    updateCountBadge();
+
+    // Nếu modal đang mở thì cập nhật luôn giao diện
+    const modal = document.getElementById('listModal');
+    if (modal && modal.classList.contains('show')) {
+        renderListModal();
+    }
+});
+
+// Khởi tạo
+document.addEventListener('DOMContentLoaded', () => {
+    renderHtttCheckboxes(false); // Sửa lại thành false để KHÔNG tự động tick khi F5 màn hình trắng
+    // updateCountBadge() sẽ được gọi tự động khi Firebase trả data về
+
+    const form = document.getElementById('surveyForm');
+    form.addEventListener('submit', handleFormSubmit);
+
+    document.getElementById('btnExport').addEventListener('click', exportToExcel);
+
+    // Nút danh sách và Modal
+    document.getElementById('btnViewList').addEventListener('click', openListModal);
+    document.getElementById('btnCloseModal').addEventListener('click', closeListModal);
+    document.getElementById('btnClearData').addEventListener('click', clearAllData);
+    document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
+
+    // Nút Quản lý hệ thống TT
+    document.getElementById('btnManageHttt').addEventListener('click', openManageHtttModal);
+    document.getElementById('btnCloseHtttModal').addEventListener('click', closeManageHtttModal);
+    document.getElementById('btnAddHtttBtn').addEventListener('click', addNewHttt);
+
+    // Đóng modal khi bấm ra ngoài
+    window.onclick = function (event) {
+        const modal = document.getElementById('listModal');
+        const manageModal = document.getElementById('manageHtttModal');
+        if (event.target == modal) {
+            closeListModal();
+        }
+        if (event.target == manageModal) {
+            closeManageHtttModal();
+        }
+    }
+});
+
+function getSurveys() {
+    return localSurveys;
+}
+
+// Render checkboxes HTTT
+function renderHtttCheckboxes(forceCheckAll = false, newlyAddedItem = null) {
+    const container = document.getElementById('htttList');
+    
+    // Ghi nhớ lại những ô nào đang được check trên màn hình (để khi vẽ lại không bị mất)
+    const checkedValues = new Set();
+    const existingCheckboxes = container.querySelectorAll('input[type="checkbox"]');
+    
+    // Nếu màn hình đã có checkbox (tức là đang sửa/thêm dở), ta lưu lại trạng thái của những ô đang tick
+    if (existingCheckboxes.length > 0 && !forceCheckAll) {
+        existingCheckboxes.forEach(cb => {
+            if (cb.checked) checkedValues.add(cb.value);
+        });
+    }
+
+    container.innerHTML = ''; // Làm sạch để vẽ lại danh sách mới nhất
+
+    dynamicHtttList.forEach((item) => {
+        const label = document.createElement('label');
+        label.className = 'custom-checkbox';
+
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.name = `he_thong_thong_tin`;
+        input.value = item;
+        
+        // Tick ô này khi:
+        // 1. Lần đầu mở form hoặc Reset form (forceCheckAll = true)
+        // 2. Ô này vừa được user bấm Thêm mới (newlyAddedItem)
+        // 3. Trong trường hợp đang vẽ lại list (do thêm mới/xoá), nếu ô này TRƯỚC ĐÓ ĐANG ĐƯỢC TICK thì tick lại.
+        //     * Ngoại lệ: Nếu màn hình chưa có gì (existingCheckboxes.length === 0) thì mặc định tick hết như lần đầu.
+        if (
+            forceCheckAll || 
+            item === newlyAddedItem || 
+            (existingCheckboxes.length > 0 && checkedValues.has(item)) ||
+            (existingCheckboxes.length === 0)
+        ) {
+            input.checked = true;
+        }
+
+        const span = document.createElement('span');
+        span.className = 'checkmark';
+
+        const text = document.createTextNode(' ' + item);
+
+        label.appendChild(input);
+        label.appendChild(span);
+        label.appendChild(text);
+
+        container.appendChild(label);
+    });
+}
+
+// Gom thông tin từ form
+function getFormData() {
+    const form = document.getElementById('surveyForm');
+    const formData = new FormData(form);
+
+    const htttArray = formData.getAll('he_thong_thong_tin');
+
+    // Nếu đang sửa thì sẽ có editId, nếu mới thì id sẽ trống và Firebase sẽ tự tạo
+    const id = document.getElementById('editId').value;
+
+    return {
+        id: id,
+        ten_khao_sat: "Bảng khảo sát ATTT Cấp độ 2",
+        don_vi_khao_sat: formData.get('don_vi_khao_sat'),
+        thoi_gian_nhap: new Date().toISOString(),
+        ha_tang_thiet_bi: {
+            tong_may_ban: parseInt(formData.get('ha_tang_thiet_bi.tong_may_ban')) || 0,
+            tong_laptop: parseInt(formData.get('ha_tang_thiet_bi.tong_laptop')) || 0,
+            so_may_ram_lon_hon_4G: parseInt(formData.get('ha_tang_thiet_bi.so_may_ram_lon_hon_4G')) || 0,
+            so_duong_internet: parseInt(formData.get('ha_tang_thiet_bi.so_duong_internet')) || 0,
+            so_camera: formData.get('ha_tang_thiet_bi.so_camera') || "0",
+            cai_phan_mem_antivirus: formData.get('ha_tang_thiet_bi.cai_phan_mem_antivirus') || "",
+            so_luong_cai_smartIR: parseInt(formData.get('ha_tang_thiet_bi.so_luong_cai_smartIR')) || 0,
+            he_thong_mang_lan: formData.get('ha_tang_thiet_bi.he_thong_mang_lan') ? true : false,
+            co_thi_cong_mang_lan: formData.get('ha_tang_thiet_bi.co_thi_cong_mang_lan') ? true : false,
+            tuong_lua: formData.get('ha_tang_thiet_bi.tuong_lua') ? true : false,
+            co_trien_khai_tuong_lua: formData.get('ha_tang_thiet_bi.co_trien_khai_tuong_lua') ? true : false
+        },
+        he_thong_thong_tin: htttArray,
+        thong_tin_lien_he: {
+            dau_moi_cung_cap: {
+                ho_ten: formData.get('thong_tin_lien_he.dau_moi_cung_cap.ho_ten'),
+                so_dien_thoai: formData.get('thong_tin_lien_he.dau_moi_cung_cap.so_dien_thoai'),
+                don_vi: formData.get('thong_tin_lien_he.dau_moi_cung_cap.don_vi')
+            },
+            don_vi_van_hanh: {
+                nguoi_dai_dien: formData.get('thong_tin_lien_he.don_vi_van_hanh.nguoi_dai_dien'),
+                chuc_vu: formData.get('thong_tin_lien_he.don_vi_van_hanh.chuc_vu'),
+                dia_chi: formData.get('thong_tin_lien_he.don_vi_van_hanh.dia_chi'),
+                so_dien_thoai: formData.get('thong_tin_lien_he.don_vi_van_hanh.so_dien_thoai'),
+                thu_dien_tu: formData.get('thong_tin_lien_he.don_vi_van_hanh.thu_dien_tu')
+            },
+            cong_an_xa: {
+                ho_ten: formData.get('thong_tin_lien_he.cong_an_xa.ho_ten'),
+                so_dien_thoai: formData.get('thong_tin_lien_he.cong_an_xa.so_dien_thoai')
+            }
+        }
+    };
+}
+
+// Xử lý Submit
+function handleFormSubmit(e) {
+    e.preventDefault();
+    const data = getFormData();
+
+    // Vô hiệu hóa nút lưu tạm thời
+    const btnSubmit = document.getElementById('btnSubmit');
+    const submitText = document.getElementById('submitText');
+    const originalText = submitText.innerText;
+
+    btnSubmit.disabled = true;
+    submitText.innerText = "Đang lưu...";
+    btnSubmit.style.opacity = 0.7;
+
+    const isEdit = document.getElementById('editId').value !== "";
+
+    if (isEdit) {
+        // Cập nhật lên Firebase
+        const recordId = data.id;
+        delete data.id; // Không cần lưu id vào trong nội dung do nó là key rồi
+
+        surveysRef.child(recordId).update(data)
+            .then(() => {
+                showToast('Cập nhật dữ liệu thành công!');
+                // Đã bỏ dòng cancelEdit() để form giữ nguyên trạng thái sửa
+            })
+            .catch((error) => {
+                showToast('Lỗi khi cập nhật: ' + error.message, 'error');
+            })
+            .finally(() => {
+                btnSubmit.disabled = false;
+                submitText.innerText = originalText;
+                btnSubmit.style.opacity = 1;
+            });
+    } else {
+        // Thêm mới lên Firebase
+        delete data.id;
+        surveysRef.push(data)
+            .then(() => {
+                showToast('Đã thêm mới thành công!');
+                e.target.reset();
+                document.getElementById('don_vi_khao_sat').focus();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            })
+            .catch((error) => {
+                showToast('Lỗi khi thêm mới: ' + error.message, 'error');
+            })
+            .finally(() => {
+                btnSubmit.disabled = false;
+                submitText.innerText = originalText;
+                btnSubmit.style.opacity = 1;
+            });
+    }
+}
+
+// Tính năng Load dữ liệu vào form để sửa
+function loadSurveyToForm(id) {
+    const surveys = getSurveys();
+    const survey = surveys.find(s => s.id === id);
+    if (!survey) return;
+
+    const form = document.getElementById('surveyForm');
+    form.reset(); // clear cũ
+
+    // Set hidden id
+    document.getElementById('editId').value = survey.id;
+
+    // Điền trường cơ bản
+    form.elements['don_vi_khao_sat'].value = survey.don_vi_khao_sat || "";
+    form.elements['ha_tang_thiet_bi.tong_may_ban'].value = survey.ha_tang_thiet_bi.tong_may_ban || "";
+    form.elements['ha_tang_thiet_bi.tong_laptop'].value = survey.ha_tang_thiet_bi.tong_laptop || "";
+    form.elements['ha_tang_thiet_bi.so_may_ram_lon_hon_4G'].value = survey.ha_tang_thiet_bi.so_may_ram_lon_hon_4G || "";
+    form.elements['ha_tang_thiet_bi.so_duong_internet'].value = survey.ha_tang_thiet_bi.so_duong_internet || "";
+    form.elements['ha_tang_thiet_bi.so_camera'].value = survey.ha_tang_thiet_bi.so_camera || "";
+    form.elements['ha_tang_thiet_bi.cai_phan_mem_antivirus'].value = survey.ha_tang_thiet_bi.cai_phan_mem_antivirus || "";
+    form.elements['ha_tang_thiet_bi.so_luong_cai_smartIR'].value = survey.ha_tang_thiet_bi.so_luong_cai_smartIR || "";
+
+    // Checkbox hạ tầng
+    form.elements['ha_tang_thiet_bi.he_thong_mang_lan'].checked = survey.ha_tang_thiet_bi.he_thong_mang_lan;
+    form.elements['ha_tang_thiet_bi.co_thi_cong_mang_lan'].checked = survey.ha_tang_thiet_bi.co_thi_cong_mang_lan;
+    form.elements['ha_tang_thiet_bi.tuong_lua'].checked = survey.ha_tang_thiet_bi.tuong_lua;
+    form.elements['ha_tang_thiet_bi.co_trien_khai_tuong_lua'].checked = survey.ha_tang_thiet_bi.co_trien_khai_tuong_lua;
+
+    // Checkbox HTTT
+    const httts = form.elements['he_thong_thong_tin'];
+    for (let i = 0; i < httts.length; i++) {
+        if (survey.he_thong_thong_tin.includes(httts[i].value)) {
+            httts[i].checked = true;
+        }
+    }
+
+    // Liên hệ
+    form.elements['thong_tin_lien_he.dau_moi_cung_cap.ho_ten'].value = survey.thong_tin_lien_he.dau_moi_cung_cap.ho_ten || "";
+    form.elements['thong_tin_lien_he.dau_moi_cung_cap.so_dien_thoai'].value = survey.thong_tin_lien_he.dau_moi_cung_cap.so_dien_thoai || "";
+    form.elements['thong_tin_lien_he.dau_moi_cung_cap.don_vi'].value = survey.thong_tin_lien_he.dau_moi_cung_cap.don_vi || "";
+
+    form.elements['thong_tin_lien_he.don_vi_van_hanh.nguoi_dai_dien'].value = survey.thong_tin_lien_he.don_vi_van_hanh.nguoi_dai_dien || "";
+    form.elements['thong_tin_lien_he.don_vi_van_hanh.chuc_vu'].value = survey.thong_tin_lien_he.don_vi_van_hanh.chuc_vu || "";
+    form.elements['thong_tin_lien_he.don_vi_van_hanh.dia_chi'].value = survey.thong_tin_lien_he.don_vi_van_hanh.dia_chi || "";
+    form.elements['thong_tin_lien_he.don_vi_van_hanh.so_dien_thoai'].value = survey.thong_tin_lien_he.don_vi_van_hanh.so_dien_thoai || "";
+    form.elements['thong_tin_lien_he.don_vi_van_hanh.thu_dien_tu'].value = survey.thong_tin_lien_he.don_vi_van_hanh.thu_dien_tu || "";
+
+    form.elements['thong_tin_lien_he.cong_an_xa.ho_ten'].value = survey.thong_tin_lien_he.cong_an_xa.ho_ten || "";
+    form.elements['thong_tin_lien_he.cong_an_xa.so_dien_thoai'].value = survey.thong_tin_lien_he.cong_an_xa.so_dien_thoai || "";
+
+    // Bật hiệu ứng chế độ sửa
+    document.getElementById('editAlert').style.display = 'flex';
+    document.getElementById('editingName').innerText = survey.don_vi_khao_sat;
+
+    const btnSubmit = document.getElementById('btnSubmit');
+    btnSubmit.classList.add('edit-mode');
+    document.getElementById('submitText').innerText = "Cập Nhật Khảo Sát";
+
+    closeListModal();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(`Đang sửa: ${survey.don_vi_khao_sat}`, 'info');
+}
+
+// Hủy chế độ chỉnh sửa
+function cancelEdit() {
+    document.getElementById('surveyForm').reset();
+    document.getElementById('editId').value = "";
+
+    // Reset lại checkbox (false: không tick sẵn cái nào) khi về form thêm mới
+    renderHtttCheckboxes(false); 
+
+    document.getElementById('editAlert').style.display = 'none';
+    const btnSubmit = document.getElementById('btnSubmit');
+    btnSubmit.classList.remove('edit-mode');
+    document.getElementById('submitText').innerText = "Lưu Khảo Sát Mới";
+}
+
+// Xóa một survey
+function deleteSurvey(id) {
+    if (confirm("Bạn có chắc chắn xóa bản ghi này?")) {
+        surveysRef.child(id).remove()
+            .then(() => {
+                // Nếu đang sửa thằng này thì hủy sửa
+                if (document.getElementById('editId').value === id) {
+                    cancelEdit();
+                }
+                showToast("Đã xóa bản ghi!");
+            })
+            .catch((error) => {
+                showToast("Lỗi khi xóa: " + error.message, 'error');
+            });
+    }
+}
+
+// Xóa tất cả
+function clearAllData() {
+    const surveys = getSurveys();
+    if (surveys.length === 0) return;
+
+    if (confirm(`Bạn có chắc muốn xóa TẤT CẢ ${surveys.length} bản ghi trên Cơ sở dữ liệu? Hành động này không thể hoàn tác!`)) {
+        surveysRef.remove()
+            .then(() => {
+                cancelEdit();
+                showToast('Đã xóa tất cả dữ liệu từ Firebase!');
+            })
+            .catch((error) => {
+                showToast("Lỗi khi xóa: " + error.message, 'error');
+            });
+    }
+}
+
+// Giao diện Modal List
+function updateCountBadge() {
+    const surveys = getSurveys();
+    document.getElementById('countBadge').innerText = surveys.length;
+
+    const modalCount = document.getElementById('modalCount');
+    if (modalCount) modalCount.innerText = surveys.length;
+}
+
+function openListModal() {
+    renderListModal();
+    document.getElementById('listModal').classList.add('show');
+}
+
+function closeListModal() {
+    document.getElementById('listModal').classList.remove('show');
+}
+
+function renderListModal() {
+    const listContainer = document.getElementById('listContainer');
+    const surveys = getSurveys();
+
+    if (surveys.length === 0) {
+        listContainer.innerHTML = `<div class="empty-state">Chưa có khách hàng/đơn vị nào.</div>`;
+        return;
+    }
+
+    listContainer.innerHTML = '';
+    // Xếp cái mới nhất lên đầu
+    surveys.slice().reverse().forEach(survey => {
+        const date = new Date(survey.thoi_gian_nhap).toLocaleString('vi-VN');
+
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+            <div class="list-item-info">
+                <strong>${survey.don_vi_khao_sat}</strong>
+                <span>Nhập lúc: ${date}</span>
+            </div>
+            <div class="list-item-actions">
+                <button type="button" class="edit-item-btn" onclick="loadSurveyToForm('${survey.id}')">Sửa</button>
+                <button type="button" class="del-item-btn" onclick="deleteSurvey('${survey.id}')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        `;
+        listContainer.appendChild(item);
+    });
+}
+
+// Hiển thị thông báo (toast)
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.innerText = message;
+
+    if (type === 'info') {
+        toast.style.backgroundColor = 'var(--primary)';
+    } else {
+        toast.style.backgroundColor = 'var(--success)';
+    }
+
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Flat object để xuất ra Excel
+function flattenSurvey(survey) {
+    return {
+        "Ngày Nhập": new Date(survey.thoi_gian_nhap).toLocaleString('vi-VN'),
+        "Tên Khảo Sát": survey.ten_khao_sat,
+        "Đơn vị khảo sát": survey.don_vi_khao_sat,
+
+        "Tổng máy bàn": survey.ha_tang_thiet_bi.tong_may_ban,
+        "Tổng laptop": survey.ha_tang_thiet_bi.tong_laptop,
+        "Số máy RAM > 4G": survey.ha_tang_thiet_bi.so_may_ram_lon_hon_4G,
+        "Số đường internet": survey.ha_tang_thiet_bi.so_duong_internet,
+        "Số camera": survey.ha_tang_thiet_bi.so_camera,
+        "Cài PM Antivirus": survey.ha_tang_thiet_bi.cai_phan_mem_antivirus,
+        "Số lượng cài SmartIR": survey.ha_tang_thiet_bi.so_luong_cai_smartIR,
+        "HT Mạng Lan": survey.ha_tang_thiet_bi.he_thong_mang_lan ? "Có" : "Không",
+        "Đã thi công Mạng Lan": survey.ha_tang_thiet_bi.co_thi_cong_mang_lan ? "Có" : "Không",
+        "Tường lửa": survey.ha_tang_thiet_bi.tuong_lua ? "Có" : "Không",
+        "Đã triển khai tường lửa": survey.ha_tang_thiet_bi.co_trien_khai_tuong_lua ? "Có" : "Không",
+
+        "Hệ thống thông tin (đã chọn)": survey.he_thong_thong_tin.join("\n"),
+
+        "ĐM - Họ tên": survey.thong_tin_lien_he.dau_moi_cung_cap.ho_ten,
+        "ĐM - SĐT": survey.thong_tin_lien_he.dau_moi_cung_cap.so_dien_thoai,
+        "ĐM - Đơn vị": survey.thong_tin_lien_he.dau_moi_cung_cap.don_vi,
+
+        "UBND - Đại diện": survey.thong_tin_lien_he.don_vi_van_hanh.nguoi_dai_dien,
+        "UBND - Chức vụ": survey.thong_tin_lien_he.don_vi_van_hanh.chuc_vu,
+        "UBND - Địa chỉ": survey.thong_tin_lien_he.don_vi_van_hanh.dia_chi,
+        "UBND - SĐT": survey.thong_tin_lien_he.don_vi_van_hanh.so_dien_thoai,
+        "UBND - Email": survey.thong_tin_lien_he.don_vi_van_hanh.thu_dien_tu,
+
+        "Công An - Trưởng CA": survey.thong_tin_lien_he.cong_an_xa.ho_ten,
+        "Công An - SĐT": survey.thong_tin_lien_he.cong_an_xa.so_dien_thoai
+    };
+}
+
+// Xuất Excel
+function exportToExcel() {
+    const surveys = getSurveys();
+    if (surveys.length === 0) {
+        alert("Chưa có dữ liệu nào để xuất!");
+        return;
+    }
+
+    const flatData = surveys.map(flattenSurvey);
+    const worksheet = XLSX.utils.json_to_sheet(flatData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DuLieuKhaoSat");
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `KhaoSatATTT_${dateStr}.xlsx`);
+}
+
+// ==========================
+// CÁC HÀM QUẢN LÝ HTTT Modal
+// ==========================
+function openManageHtttModal() {
+    renderManageHtttList();
+    document.getElementById('manageHtttModal').classList.add('show');
+}
+
+function closeManageHtttModal() {
+    document.getElementById('manageHtttModal').classList.remove('show');
+    document.getElementById('newHtttInput').value = "";
+}
+
+function renderManageHtttList() {
+    const container = document.getElementById('manageHtttListContainer');
+    container.innerHTML = '';
+    
+    dynamicHtttList.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.padding = '8px';
+        div.style.background = '#f9f9f9';
+        div.style.border = '1px solid #eee';
+        div.style.borderRadius = '4px';
+
+        const text = document.createElement('span');
+        text.innerText = item;
+        text.style.wordBreak = 'break-word';
+
+        const delBtn = document.createElement('button');
+        delBtn.innerText = 'Xóa';
+        delBtn.type = 'button';
+        delBtn.className = 'del-item-btn';
+        delBtn.style.padding = '4px 8px';
+        delBtn.onclick = () => {
+            if (confirm(`Bạn có chắc chắn xóa hệ thống "${item}" khỏi danh mục? Các form đang mở sẽ bị ảnh hưởng!`)) {
+                dynamicHtttList.splice(index, 1);
+                saveDynamicHtttList();
+                renderManageHtttList();
+            }
+        };
+
+        div.appendChild(text);
+        div.appendChild(delBtn);
+        container.appendChild(div);
+    });
+}
+
+function addNewHttt() {
+    const input = document.getElementById('newHtttInput');
+    const val = input.value.trim();
+    if (!val) {
+        alert("Vui lòng nhập tên hệ thống.");
+        return;
+    }
+    if (dynamicHtttList.includes(val)) {
+        alert("Hệ thống này đã có trong danh sách!");
+        return;
+    }
+    dynamicHtttList.push(val);
+    saveDynamicHtttList(val); // Pass giá trị vừa tạo vào để ép tick
+    input.value = '';
+    renderManageHtttList();
+    showToast('Đã thêm HTTT mới!');
+}
+
+function saveDynamicHtttList(newlyAddedItem = null) {
+    localStorage.setItem('CUSTOM_HTTT_MANAGER', JSON.stringify(dynamicHtttList));
+    renderHtttCheckboxes(false, newlyAddedItem); // Render lại form chính, nhưng giữ nguyên các ô đang check, + tick ô mới
+}

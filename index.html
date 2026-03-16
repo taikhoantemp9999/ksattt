@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Khảo sát ATTT Cấp độ 2</title>
+    <meta name="description" content="Công cụ thu thập dữ liệu an toàn thông tin cấp xã.">
+    <!-- Google Fonts cho Typography hiện đại -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Thư viện SheetJS xuất Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Firebase SDK (Sử dụng Compat version cho dễ dùng với code JS thuần hiện tại) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Khảo sát ATTT Cấp độ 2</h1>
+                <p>Công cụ thu thập dữ liệu tối ưu cho di động</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" id="btnViewList" class="action-btn view-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    Danh sách (<span id="countBadge">0</span>)
+                </button>
+                <button type="button" id="btnExport" class="action-btn export-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Excel
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Form -->
+        <main>
+            <form id="surveyForm" class="survey-form">
+                <input type="hidden" id="editId" name="id" value="">
+                
+                <div id="editAlert" class="edit-alert" style="display: none;">
+                    <span>Đang ở chế độ chỉnh sửa đơn vị <b id="editingName"></b></span>
+                    <button type="button" id="btnCancelEdit" class="cancel-edit-btn">Hủy & Thêm mới</button>
+                </div>
+
+                <!-- Section 1: Thông tin chung -->
+                <section class="form-section group-card">
+                    <h2>I. Thông tin chung</h2>
+                    <div class="input-group">
+                        <label for="don_vi_khao_sat">Đơn vị khảo sát (Xã/Phường) <span class="required">*</span></label>
+                        <input type="text" id="don_vi_khao_sat" name="don_vi_khao_sat" placeholder="VD: Xã Yên Lập" required>
+                    </div>
+                </section>
+
+                <!-- Section 2: Hạ tầng thiết bị -->
+                <section class="form-section group-card">
+                    <h2>II. Hạ tầng thiết bị</h2>
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label for="tong_may_ban">Tổng máy bàn</label>
+                            <input type="number" id="tong_may_ban" name="ha_tang_thiet_bi.tong_may_ban" placeholder="0" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="tong_laptop">Tổng laptop</label>
+                            <input type="number" id="tong_laptop" name="ha_tang_thiet_bi.tong_laptop" placeholder="0" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="so_may_ram_lon_hon_4G">Số máy RAM > 4G</label>
+                            <input type="number" id="so_may_ram_lon_hon_4G" name="ha_tang_thiet_bi.so_may_ram_lon_hon_4G" placeholder="0" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="so_duong_internet">Số đường internet</label>
+                            <input type="number" id="so_duong_internet" name="ha_tang_thiet_bi.so_duong_internet" placeholder="0" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="so_camera">Số Camera</label>
+                            <input type="text" id="so_camera" name="ha_tang_thiet_bi.so_camera" placeholder="VD: 10">
+                        </div>
+                        <div class="input-group">
+                            <label for="cai_phan_mem_antivirus">Cài phần mềm Antivirus</label>
+                            <input type="text" id="cai_phan_mem_antivirus" name="ha_tang_thiet_bi.cai_phan_mem_antivirus" placeholder="Có/Không hoặc Tên PM">
+                        </div>
+                        <div class="input-group">
+                            <label for="so_luong_cai_smartIR">Số lượng cài SmartIR</label>
+                            <input type="number" id="so_luong_cai_smartIR" name="ha_tang_thiet_bi.so_luong_cai_smartIR" placeholder="0" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group mt-3">
+                        <label class="custom-checkbox">
+                            <input type="checkbox" name="ha_tang_thiet_bi.he_thong_mang_lan">
+                            <span class="checkmark"></span>
+                            Hệ thống mạng Lan
+                        </label>
+                        <label class="custom-checkbox">
+                            <input type="checkbox" name="ha_tang_thiet_bi.co_thi_cong_mang_lan">
+                            <span class="checkmark"></span>
+                            Có thi công mạng Lan
+                        </label>
+                        <label class="custom-checkbox">
+                            <input type="checkbox" name="ha_tang_thiet_bi.tuong_lua">
+                            <span class="checkmark"></span>
+                            Tường lửa
+                        </label>
+                        <label class="custom-checkbox">
+                            <input type="checkbox" name="ha_tang_thiet_bi.co_trien_khai_tuong_lua">
+                            <span class="checkmark"></span>
+                            Có triển khai tường lửa
+                        </label>
+                    </div>
+                </section>
+
+                <!-- Section 3: Hệ thống thông tin -->
+                <section class="form-section group-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h2 style="margin: 0;">III. Các hệ thống thông tin khai thác</h2>
+                        <button type="button" id="btnManageHttt" class="action-btn" style="font-size: 0.85em; padding: 6px 12px; border-radius: 4px;">Quản lý</button>
+                    </div>
+                    <p class="section-desc">Chọn các hệ thống đang được cấp quyền, sử dụng:</p>
+                    <div class="checkbox-list" id="htttList">
+                        <!-- Rendered via JS -->
+                    </div>
+                </section>
+
+                <!-- Section 4: Liên hệ -->
+                <section class="form-section group-card">
+                    <h2>IV. Thông tin liên hệ</h2>
+                    
+                    <h3 class="sub-heading">1. Đầu mối cung cấp thông tin</h3>
+                    <div class="input-group">
+                        <label>Họ tên</label>
+                        <input type="text" name="thong_tin_lien_he.dau_moi_cung_cap.ho_ten" placeholder="Nguyễn Văn A">
+                    </div>
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label>Số điện thoại</label>
+                            <input type="tel" name="thong_tin_lien_he.dau_moi_cung_cap.so_dien_thoai" placeholder="09xxxx">
+                        </div>
+                        <div class="input-group">
+                            <label>Đơn vị</label>
+                            <input type="text" name="thong_tin_lien_he.dau_moi_cung_cap.don_vi" placeholder="Phòng VH">
+                        </div>
+                    </div>
+
+                    <h3 class="sub-heading">2. Đơn vị vận hành (UBND xã)</h3>
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label>Người đại diện</label>
+                            <input type="text" name="thong_tin_lien_he.don_vi_van_hanh.nguoi_dai_dien" placeholder="Ngô Văn Toàn">
+                        </div>
+                        <div class="input-group">
+                            <label>Chức vụ</label>
+                            <input type="text" name="thong_tin_lien_he.don_vi_van_hanh.chuc_vu" placeholder="CT. UBND">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Địa chỉ</label>
+                        <input type="text" name="thong_tin_lien_he.don_vi_van_hanh.dia_chi">
+                    </div>
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label>Số điện thoại</label>
+                            <input type="tel" name="thong_tin_lien_he.don_vi_van_hanh.so_dien_thoai">
+                        </div>
+                        <div class="input-group">
+                            <label>Thư điện tử</label>
+                            <input type="email" name="thong_tin_lien_he.don_vi_van_hanh.thu_dien_tu">
+                        </div>
+                    </div>
+
+                    <h3 class="sub-heading">3. Công an xã</h3>
+                    <div class="grid-2-col">
+                        <div class="input-group">
+                            <label>Họ tên Trưởng CA</label>
+                            <input type="text" name="thong_tin_lien_he.cong_an_xa.ho_ten">
+                        </div>
+                        <div class="input-group">
+                            <label>Số điện thoại CA</label>
+                            <input type="tel" name="thong_tin_lien_he.cong_an_xa.so_dien_thoai">
+                        </div>
+                    </div>
+                </section>
+
+                <div class="submit-wrapper">
+                    <button type="submit" class="submit-btn" id="btnSubmit">
+                        <span id="submitText">Lưu Khảo Sát Mới</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <!-- Modal Danh Sách -->
+    <div id="listModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Danh sách khách hàng (<span id="modalCount"></span>)</h2>
+                <button class="close-btn" id="btnCloseModal">&times;</button>
+            </div>
+            <div class="modal-body" id="listContainer">
+                <!-- Data rendered here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnClearData" class="delete-all-btn">Xóa tất cả</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Quản Lý HTTT -->
+    <div id="manageHtttModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Quản lý Hệ thống khai thác</h2>
+                <button class="close-btn" id="btnCloseHtttModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <input type="text" id="newHtttInput" placeholder="Nhập tên hệ thống mới..." style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button type="button" id="btnAddHtttBtn" class="action-btn" style="padding: 0 16px;">Thêm mới</button>
+                </div>
+                <div id="manageHtttListContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                    <!-- data rendered via JS -->
+                </div>
+                <div style="margin-top: 15px; font-size: 0.85em; color: gray;">
+                    * Lưu ý: Thêm hoặc xóa hệ thống tại đây sẽ cập nhật trực tiếp danh sách các ô checkbox hiển thị trong bản khảo sát.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">Đã lưu thành công!</div>
+
+    <script src="script.js"></script>
+</body>
+</html>
