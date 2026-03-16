@@ -76,7 +76,10 @@
             <!-- Map View Area -->
             <section id="mapSection" style="display: none;">
                 <div class="map-header">
-                    <h2 id="displayBuildingName">Tòa A</h2>
+                    <div>
+                        <h2 id="displayBuildingName">Tòa A</h2>
+                        <button type="button" class="action-btn" onclick="addNewFloor()" style="background:#0284c7; color:#fff; font-size:0.85rem; padding:4px 10px; margin-top:8px; display:inline-flex; align-items:center; border:none; border-radius:4px; font-weight:600; cursor:pointer;">+ Thêm Tầng Mới</button>
+                    </div>
                     <div class="legend">
                         <span class="legend-item"><span class="dot dot-white"></span>Chưa rà soát</span>
                         <span class="legend-item"><span class="dot dot-orange"></span>Đang làm</span>
@@ -96,10 +99,11 @@
         <div class="drawer-content">
             <div class="drawer-header" style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
                 <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; padding-right:12px;">
                         <input type="text" id="drawerRoomNameInput" list="roomNameSuggestions" 
                            style="margin: 0; word-break: break-word; font-size: 1.2rem; font-weight: 600; color: var(--primary); border: 1px dashed transparent; background: transparent; padding: 4px; border-radius: 4px; width: 100%; transition: border 0.2s;"
                            placeholder="Nhập tên phòng...">
+                        <button onclick="deleteCurrentRoom()" style="background:transparent; border:none; color:#ef4444; font-size:1.4rem; padding:0 8px; cursor:pointer;" title="Xóa khu vực này">🗑️</button>
                     </div>
                     <button id="btnCloseDrawer" class="close-btn">&times;</button>
                 </div>

@@ -259,6 +259,28 @@ input:focus, select:focus, textarea:focus {
     transform: scale(0.96);
 }
 
+/* Nổi bật phòng có thiết bị ISP */
+.has-isp-room {
+    border: 2px solid #0284c7 !important;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
+    position: relative;
+    overflow: visible; /* Để chữ bay ra ngoài không bị cắt */
+}
+.has-isp-room::after {
+    content: "🌐";
+    position: absolute;
+    top: -10px;
+    right: -8px;
+    font-size: 14px;
+    background: #fff;
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.has-isp-room .room-name {
+    color: #0284c7 !important;
+}
+
 .room-name {
     font-weight: 600;
     font-size: 0.9rem;
@@ -485,6 +507,14 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: 0.85rem;
     color: var(--text-muted);
     margin-bottom: 2px;
+}
+
+.eq-item.has-isp {
+    border-left: 4px solid #0284c7;
+    background-color: rgba(2, 132, 199, 0.04);
+}
+.eq-item.has-isp .eq-item-title {
+    color: #0284c7;
 }
 
 .eq-item-delete {
