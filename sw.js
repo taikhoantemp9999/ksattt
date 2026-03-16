@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'ksattt-v1';
+const CACHE_NAME = 'ksattt-v2';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -10,6 +10,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+    self.skipWaiting(); // Ép kích hoạt ngay lập tức bỏ qua thời gian chờ
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -28,5 +29,23 @@ self.addEventListener('fetch', event => {
                 }
                 return fetch(event.request);
             })
+    );
+});
+
+// Loại bỏ những cache cũ khi khởi chạy version mới
+self.addEventListener('activate', event => {
+    event.waitUntil(self.clients.claim()); // Giành quyền kiểm soát trình duyệt ngay lập tức
+    
+    const cacheAllowlist = [CACHE_NAME];
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheAllowlist.indexOf(cacheName) === -1) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
     );
 });

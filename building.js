@@ -20,7 +20,6 @@ const setupSection = document.getElementById("setupSection");
 const mapSection = document.getElementById("mapSection");
 const floorsContainer = document.getElementById("floorsContainer");
 
-// Drawer Elements
 const roomDrawer = document.getElementById("roomDrawer");
 const drawerRoomNameInput = document.getElementById("drawerRoomNameInput");
 
@@ -28,6 +27,10 @@ const roomCompletedToggle = document.getElementById("roomCompletedToggle");
 const btnCloseDrawer = document.getElementById("btnCloseDrawer");
 const equipmentsList = document.getElementById("equipmentsList");
 const equipmentCountBadge = document.getElementById("equipmentCountBadge");
+
+const mainNetworkNotes = document.getElementById("mainNetworkNotes");
+const networkNoteSaveStatus = document.getElementById("networkNoteSaveStatus");
+let networkNoteTimeout = null;
 
 // Khởi tạo Datalist Gợi ý từ Firebase
 let userSuggestions = {
@@ -183,6 +186,9 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
     const template = document.getElementById("buildingTemplate").value;
 
     document.getElementById("displayBuildingName").innerText = name;
+    
+    // Gán trống giá trị UI
+    mainNetworkNotes.value = '';
 
     // Tạo mảng Dữ liệu Tòa nhà mới
     buildingData = {
@@ -423,8 +429,24 @@ window.editBuilding = function (id) {
         buildingData = target;
         migrateLegacyPositions();
         document.getElementById("displayBuildingName").innerText = buildingData.name;
+        // Phục hồi note cũ nếu có
+        mainNetworkNotes.value = buildingData.mainNetworkNotes || '';
         renderMap();
         showMapSection();
+    }
+};
+
+// Xử lý Ghi chú Đường Truyền Mạng Chính (Save thủ công qua nút)
+window.saveNetworkNotes = function() {
+    buildingData.mainNetworkNotes = mainNetworkNotes.value.trim();
+    const index = buildingsArray.findIndex(b => b.id === buildingData.id);
+    if (index !== -1) {
+        buildingsArray[index] = buildingData;
+        saveBuildingsArrayLocally();
+        networkNoteSaveStatus.style.display = 'inline';
+        setTimeout(() => { networkNoteSaveStatus.style.display = 'none'; }, 3000);
+    } else {
+        showToast("Lỗi: Không tìm thấy Tòa nhà để lưu!", "error");
     }
 };
 
@@ -484,6 +506,11 @@ function saveSuggestion(category, value) {
 // Hàm Render Ma trận lưới Phòng
 function renderMap() {
     floorsContainer.innerHTML = '';
+    
+    // Đổ dữ liệu Ghi chú Đường mạng chính ra UI
+    if (mainNetworkNotes) {
+        mainNetworkNotes.value = buildingData.mainNetworkNotes || '';
+    }
 
     // Gom nhóm theo tầng
     const floorsMap = {};
@@ -527,12 +554,14 @@ function renderMap() {
             const nodeEqs = buildingData.equipments.filter(eq => eq.nodeId === node.id);
             const eqCount = nodeEqs.length;
             const hasIsp = nodeEqs.some(eq => eq.isp && eq.isp.trim() !== '');
+            const hasMainDev = nodeEqs.some(eq => eq.isMainDevice === true || eq.isMainDevice === "true");
 
             const card = document.createElement('div');
 
             let extraClass = '';
             if (node.type === 'Corridor') extraClass = 'corridor-node';
             if (node.type === 'Staircase') extraClass = 'staircase-node';
+            
             if (hasIsp) extraClass += ' has-isp-room';
 
             card.className = `room-card ${extraClass} status-${node.status}`;
@@ -541,7 +570,9 @@ function renderMap() {
             if (node.type === 'Corridor') icon = '🚪 ';
             if (node.type === 'Staircase') icon = '🪜 ';
 
-            card.innerHTML = `<div class="room-name" title="${node.name}">${icon}${node.name}</div><div class="room-eq-count">💻 ${eqCount}</div>`;
+            let customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
+
+            card.innerHTML = `<div class="room-name" style="${customNameStyle}" title="${node.name}">${icon}${node.name}</div><div class="room-eq-count">💻 ${eqCount}</div>`;
             card.addEventListener('click', () => openRoomDrawer(node.id));
 
             scrollDiv.appendChild(card);
@@ -558,6 +589,57 @@ function renderMap() {
         floorDiv.appendChild(scrollDiv);
         floorsContainer.appendChild(floorDiv);
     });
+
+    // Cập nhật Bảng thống kê cuối trang
+    renderEquipmentSummary();
+}
+
+// Hàm Xử lý Dữ liệu Bảng Tổng hợp Thiết bị Tòa nhà
+function renderEquipmentSummary() {
+    const summaryDiv = document.getElementById("buildingEquipmentSummary");
+    const tbody = document.getElementById("summaryTableBody");
+    
+    if (!summaryDiv || !tbody) return;
+
+    if (!buildingData.equipments || buildingData.equipments.length === 0) {
+        summaryDiv.style.display = 'none';
+        return;
+    }
+
+    // Gom nhóm theo Tên và Model
+    const groupedData = {};
+    buildingData.equipments.forEach(eq => {
+        // Tạo key gộp để nhóm các bản ghi có chung Name và Model
+        const key = `${eq.name || 'Không tên'}|||${eq.model || '-'}`;
+        if (!groupedData[key]) {
+            groupedData[key] = {
+                name: eq.name || 'Không tên',
+                model: eq.model || '-',
+                count: 0
+            };
+        }
+        groupedData[key].count += 1;
+    });
+
+    tbody.innerHTML = '';
+    
+    // Sort array cho đẹp theo Alphabet
+    const sortedKeys = Object.keys(groupedData).sort();
+    
+    sortedKeys.forEach(key => {
+        const item = groupedData[key];
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #e2e8f0';
+        
+        tr.innerHTML = `
+            <td style="padding: 10px; border-right: 1px solid #e2e8f0; font-weight: 500; color: #334155;">${item.name}</td>
+            <td style="padding: 10px; border-right: 1px solid #e2e8f0; color: #475569;">${item.model}</td>
+            <td style="padding: 10px; text-align: center; font-weight: 700; color: #0284c7; font-size: 1.1em;">${item.count}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    summaryDiv.style.display = 'block';
 }
 
 // Logic Drawer
@@ -638,13 +720,16 @@ function renderEquipmentsInDrawer(nodeId) {
 
     equipmentsList.innerHTML = '';
     eqs.forEach(eq => {
+        const isMainHtml = eq.isMainDevice ? `<div class="eq-item-detail" style="color:#9333ea; font-weight:600; background:rgba(147,51,234,0.1); display:inline-block; padding:2px 6px; border-radius:4px; margin-right:4px;">🌟 Mạch chính</div>` : '';
         const ispHtml = eq.isp ? `<div class="eq-item-detail" style="color:#0284c7; font-weight:600; background:rgba(2,132,199,0.1); display:inline-block; padding:2px 6px; border-radius:4px;">🌐 ISP: ${eq.isp}</div>` : '';
+        const combinedTags = (isMainHtml || ispHtml) ? `<div style="margin-top:4px;">${isMainHtml}${ispHtml}</div>` : '';
+        
         const div = document.createElement('div');
-        div.className = eq.isp ? 'eq-item has-isp' : 'eq-item';
+        div.className = 'eq-item' + (eq.isp ? ' has-isp' : '') + (eq.isMainDevice ? ' has-main-device' : '');
         div.innerHTML = `
             <div class="eq-item-title">${eq.name} ${eq.model ? `(${eq.model})` : ''}</div>
             <div class="eq-item-detail">📍 ${eq.exactLocation || 'Không ghi rõ vị trí'}</div>
-            ${ispHtml}
+            ${combinedTags}
             <div class="eq-item-detail">🎯 ${eq.purpose || 'Không rõ mục đích'}</div>
             <button class="eq-item-delete" onclick="deleteEquipment('${eq.id}')">&times;</button>
         `;
@@ -657,6 +742,7 @@ btnAddEquipment.addEventListener('click', () => {
     equipmentForm.reset();
     document.getElementById("eqId").value = '';
     document.getElementById('eqISP').value = ''; // Reset ISP field
+    document.getElementById('eqIsMainDevice').checked = false; // Reset Main Device check
     equipmentModal.classList.add('active');
 });
 
@@ -674,6 +760,7 @@ equipmentForm.addEventListener('submit', (e) => {
         model: document.getElementById('eqModel').value,
         exactLocation: document.getElementById('eqExactLocation').value,
         isp: document.getElementById('eqISP').value,
+        isMainDevice: document.getElementById('eqIsMainDevice').checked,
         purpose: document.getElementById('eqPurpose').value,
         notes: document.getElementById('eqNotes').value
     };
@@ -864,3 +951,60 @@ window.deleteRoomFromDirectory = function (index) {
         showToast("Đã xóa tên phòng khỏi danh mục");
     }
 };
+
+// Tính năng Export (Backup)
+document.getElementById('btnExportData').addEventListener('click', () => {
+    if(buildingsArray.length === 0) {
+        showToast("Không có dữ liệu tòa nhà để tải!");
+        return;
+    }
+    const dataStr = JSON.stringify(buildingsArray, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    let safeName = customerName.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'backup';
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_${safeName}_sodo.json`;
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }, 0);
+    showToast("Đã tải tệp Backup thành công!");
+});
+
+// Tính năng Import (Restore)
+document.getElementById('importDataFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const importedData = JSON.parse(event.target.result);
+            if(Array.isArray(importedData)) {
+                if(buildingsArray.length > 0) {
+                    if(!confirm("Dữ liệu hiện tại sẽ bị xóa và GHÌ ĐÈ bởi tệp bạn vừa up. Bạn có chắc chắn?")) {
+                        e.target.value = ''; // Reset
+                        return;
+                    }
+                }
+                buildingsArray = importedData;
+                saveBuildingsArrayLocally(); // Vừa lưu local vừa update Cloud
+                renderBuildingsList();
+                showToast("Đã phục hồi dữ liệu thành công!");
+            } else {
+                alert("Tệp JSON không hợp lệ hoặc sai cấu trúc.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Lỗi đọc tệp JSON!");
+        }
+        e.target.value = ''; // Reset input file
+    };
+    reader.readAsText(file);
+});

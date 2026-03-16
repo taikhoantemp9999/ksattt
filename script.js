@@ -275,11 +275,20 @@ function renderHtttCheckboxes(forceCheckAll = false, newlyAddedItem = null) {
         const span = document.createElement('span');
         span.className = 'checkmark';
 
-        const text = document.createTextNode(' ' + item);
-
         label.appendChild(input);
         label.appendChild(span);
-        label.appendChild(text);
+        
+        // Highlight đỏ nếu không phải hệ thống mặc định
+        if (!HTTT_LIST.includes(item)) {
+            const customText = document.createElement('span');
+            customText.style.color = '#ef4444';
+            customText.style.fontWeight = '500';
+            customText.textContent = ' ' + item;
+            label.appendChild(customText);
+        } else {
+            const text = document.createTextNode(' ' + item);
+            label.appendChild(text);
+        }
 
         container.appendChild(label);
     });
@@ -299,6 +308,7 @@ function getFormData() {
         id: id,
         ten_khao_sat: "Bảng khảo sát ATTT Cấp độ 2",
         don_vi_khao_sat: formData.get('don_vi_khao_sat'),
+        de_xuat: formData.get('de_xuat') || "",
         thoi_gian_nhap: new Date().toISOString(),
         ha_tang_thiet_bi: {
             tong_may_ban: parseInt(formData.get('ha_tang_thiet_bi.tong_may_ban')) || 0,
@@ -425,6 +435,9 @@ function loadSurveyToForm(id) {
 
     // Điền trường cơ bản
     form.elements['don_vi_khao_sat'].value = survey.don_vi_khao_sat || "";
+    if (form.elements['de_xuat']) {
+        form.elements['de_xuat'].value = survey.de_xuat || "";
+    }
     form.elements['ha_tang_thiet_bi.tong_may_ban'].value = survey.ha_tang_thiet_bi.tong_may_ban || "";
     form.elements['ha_tang_thiet_bi.tong_laptop'].value = survey.ha_tang_thiet_bi.tong_laptop || "";
     form.elements['ha_tang_thiet_bi.so_may_ram_lon_hon_4G'].value = survey.ha_tang_thiet_bi.so_may_ram_lon_hon_4G || "";

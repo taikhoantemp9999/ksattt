@@ -50,6 +50,13 @@
                     <button type="button" id="btnShowSetup" class="primary-btn"
                         style="width:auto; padding:8px 12px; font-size:0.85rem;">+ Thêm mới</button>
                 </div>
+                
+                <!-- Backup Actions -->
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:16px;">
+                    <button type="button" id="btnExportData" class="action-btn" style="background:#f1f5f9; color:#475569; font-size:0.8rem; padding:6px 10px; border:1px solid #cbd5e1; white-space:nowrap;">💾 Tải Sơ Đồ (Backup)</button>
+                    <label for="importDataFile" class="action-btn" style="background:#f1f5f9; color:#475569; font-size:0.8rem; padding:6px 10px; cursor:pointer; margin:0; border:1px solid #cbd5e1; white-space:nowrap;">📂 Phục Hồi (Restore)</label>
+                    <input type="file" id="importDataFile" accept=".json" style="display:none;">
+                </div>
                 <!-- Container for Multiple Buildings -->
                 <div id="buildingsListContainer" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Rendered via JS -->
@@ -106,9 +113,44 @@
                         <span class="legend-item"><span class="dot dot-green"></span>Hoàn thành</span>
                     </div>
                 </div>
+                
+                <!-- Ghi chú Đường mạng chính của Tòa nhà -->
+                <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin: 16px 0; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <label for="mainNetworkNotes" style="display: block; font-weight: 600; color: #9333ea; margin-bottom: 8px;">🌟 Ghi chú Luồng Tuyến Cáp Mạng Chính (Từ đâu đến đâu)</label>
+                    <textarea id="mainNetworkNotes" rows="2" placeholder="Ví dụ: Tầng 1 (Modem Viettel) -> Kéo lên Tầng 3 (Phòng Server) -> Chia ra Switch Tầng 4..."
+                        style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; font-family: inherit; resize: vertical;"></textarea>
+                    <div style="text-align: right; margin-top: 8px; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <span id="networkNoteSaveStatus" style="font-size: 0.85rem; color: #10b981; display: none; font-weight: 500;">✓ Đã lưu thành công</span>
+                        <button type="button" id="btnSaveNetworkNotes" onclick="saveNetworkNotes()" style="background: #9333ea; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.9rem;">
+                            💾 Lưu Ghi Chú
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Container for floors and rooms -->
                 <div id="floorsContainer" class="floors-container">
                     <!-- Rendered via JS -->
+                </div>
+
+                <!-- Bảng Thống kê Thiết bị Tòa nhà -->
+                <div id="buildingEquipmentSummary" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin: 24px 0 16px 0; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: none;">
+                    <h3 style="margin-top: 0; margin-bottom: 12px; color: #0284c7; display: flex; align-items: center; gap: 8px;">
+                        📊 Bảng Tổng hợp Thiết bị Tòa nhà
+                    </h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                    <th style="padding: 10px; text-align: left; border-right: 1px solid #e2e8f0; width: 50%;">Tên Thiết bị</th>
+                                    <th style="padding: 10px; text-align: left; border-right: 1px solid #e2e8f0; width: 30%;">Model / Phân loại</th>
+                                    <th style="padding: 10px; text-align: center; width: 20%;">Tổng số lượng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryTableBody">
+                                <!-- Rendered via JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
         </main>
@@ -237,6 +279,10 @@
                     <div class="input-group">
                         <label>Ghi chú thêm</label>
                         <textarea id="eqNotes" rows="2" placeholder="Tình trạng hỏng hóc, nhãn dán..."></textarea>
+                    </div>
+                    <div class="input-group" style="background: rgba(147, 51, 234, 0.05); border-left: 3px solid #9333ea; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="eqIsMainDevice" style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="eqIsMainDevice" style="color: #9333ea; font-weight: 600; margin-bottom: 0; cursor: pointer;">🌟 Đánh dấu là Thiết bị mạng chính</label>
                     </div>
                     <button type="submit" class="submit-btn mt-3"
                         style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600;">Lưu
