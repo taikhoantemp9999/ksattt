@@ -36,6 +36,7 @@ let localSurveys = [];
 const urlParams = new URLSearchParams(window.location.search);
 const preloadEditId = urlParams.get('editId');
 let hasAutoLoadedPreload = false;
+let editPasswordVerified = false; // chỉ hỏi pass sửa 1 lần / lần mở trang
 
 // Lắng nghe dữ liệu realtime từ Firebase
 surveysRef.on('value', (snapshot) => {
@@ -423,10 +424,13 @@ function handleFormSubmit(e) {
 
 // Tính năng Load dữ liệu vào form để sửa
 function loadSurveyToForm(id) {
-    const password = prompt("Nhập mật khẩu để thực hiện chức năng sửa:");
-    if (password !== "Vnpt@2026") {
-        showToast("Mật khẩu không đúng. Hủy thao tác sửa.", "error");
-        return;
+    if (!editPasswordVerified) {
+        const password = prompt("Nhập mật khẩu để thực hiện chức năng sửa:");
+        if (password !== "Vnpt@2026") {
+            showToast("Mật khẩu không đúng. Hủy thao tác sửa.", "error");
+            return;
+        }
+        editPasswordVerified = true;
     }
 
     const surveys = getSurveys();
@@ -477,9 +481,11 @@ function loadSurveyToForm(id) {
 
     // Checkbox HTTT
     const httts = form.elements['he_thong_thong_tin'];
-    for (let i = 0; i < httts.length; i++) {
-        if (survey.he_thong_thong_tin.includes(httts[i].value)) {
-            httts[i].checked = true;
+    if (httts && httts.length && Array.isArray(survey.he_thong_thong_tin)) {
+        for (let i = 0; i < httts.length; i++) {
+            if (survey.he_thong_thong_tin.includes(httts[i].value)) {
+                httts[i].checked = true;
+            }
         }
     }
 
