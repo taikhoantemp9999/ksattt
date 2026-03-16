@@ -33,6 +33,9 @@ const surveysRef = database.ref('surveys_ATTT');
 
 // Biến lưu trữ tại client
 let localSurveys = [];
+const urlParams = new URLSearchParams(window.location.search);
+const preloadEditId = urlParams.get('editId');
+let hasAutoLoadedPreload = false;
 
 // Lắng nghe dữ liệu realtime từ Firebase
 surveysRef.on('value', (snapshot) => {
@@ -48,6 +51,16 @@ surveysRef.on('value', (snapshot) => {
     const modal = document.getElementById('listModal');
     if (modal && modal.classList.contains('show')) {
         renderListModal();
+    }
+
+    // Auto load edit nếu có param chuyển về từ trang Tòa nhà
+    if (preloadEditId && !hasAutoLoadedPreload && localSurveys.length > 0) {
+        hasAutoLoadedPreload = true;
+        setTimeout(() => {
+            loadSurveyToForm(preloadEditId);
+            // Dọn dẹp URL để không bị dính param khi refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 300);
     }
 });
 
@@ -301,6 +314,12 @@ function loadSurveyToForm(id) {
     document.getElementById('editAlert').style.display = 'flex';
     document.getElementById('editingName').innerText = survey.don_vi_khao_sat;
 
+    // Hiển thị nút Khảo sát Tòa nhà & gán link
+    document.getElementById('buildingSurveyWrapper').style.display = 'block';
+    document.getElementById('btnOpenBuildingSurvey').onclick = () => {
+        window.location.href = `building.html?customerId=${survey.id}&customerName=${encodeURIComponent(survey.don_vi_khao_sat)}`;
+    };
+
     const btnSubmit = document.getElementById('btnSubmit');
     btnSubmit.classList.add('edit-mode');
     document.getElementById('submitText').innerText = "Cập Nhật Khảo Sát";
@@ -319,6 +338,10 @@ function cancelEdit() {
     renderHtttCheckboxes(false); 
 
     document.getElementById('editAlert').style.display = 'none';
+    
+    // Ẩn nút Sơ đồ tòa nhà
+    document.getElementById('buildingSurveyWrapper').style.display = 'none';
+
     const btnSubmit = document.getElementById('btnSubmit');
     btnSubmit.classList.remove('edit-mode');
     document.getElementById('submitText').innerText = "Lưu Khảo Sát Mới";
