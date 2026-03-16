@@ -45,6 +45,9 @@ surveysRef.on('value', (snapshot) => {
         data.id = childSnapshot.key; // Gắn ID thật trên cloud vào
         localSurveys.push(data);
     });
+    // Lưu ý: data này sẽ được cached ra localstorage để phòng khi offline
+    localStorage.setItem('CACHED_SURVEYS', JSON.stringify(localSurveys));
+
     updateCountBadge();
 
     // Nếu modal đang mở thì cập nhật luôn giao diện
@@ -97,6 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Logic Offline/Online
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    updateNetworkStatus();
+
+    // Thử đồng bộ dữ liệu Offline định kỳ (10s/lần)
+    setInterval(syncOfflineData, 10000);
+
     // Logic Ẩn hiện ô nhập thiết bị tường lửa
     const tuongLuaCheckbox = document.getElementById('co_trien_khai_tuong_lua');
     const firewallWrapper = document.getElementById('firewallDeviceWrapper');
@@ -114,7 +125,110 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// ===== LOGIC OFFLINE =====
+function updateNetworkStatus() {
+    const statusDiv = document.getElementById('networkStatus');
+    if (!navigator.onLine) {
+        statusDiv.style.display = 'block';
+    } else {
+        statusDiv.style.display = 'none';
+        syncOfflineData(); // Thử sync ngay khi có mạng
+    }
+}
+
+function getOfflineSurveys() {
+    return JSON.parse(localStorage.getItem('OFFLINE_SURVEYS')) || [];
+}
+
+function saveOfflineSurvey(data, actionStr) {
+    const offlineList = getOfflineSurveys();
+    data._offlineAction = actionStr; // 'add' hoặc 'update' hoặc 'delete'
+    data._offlineTimestamp = Date.now();
+
+    if (!data.id) data.id = 'offline_' + Date.now();
+
+    // Nếu là update/delete, tìm xem đã có trong offline list chưa thì đè
+    const existingIndex = offlineList.findIndex(s => s.id === data.id);
+    if (existingIndex >= 0) {
+        offlineList[existingIndex] = data;
+    } else {
+        offlineList.push(data);
+    }
+
+    localStorage.setItem('OFFLINE_SURVEYS', JSON.stringify(offlineList));
+    showToast("Đã lưu ngoại tuyến. Đang chờ mạng để đồng bộ...", "info");
+
+    if (actionStr !== 'delete') {
+        // Render tạm vào localSurveys màn hình
+        const idx = localSurveys.findIndex(s => s.id === data.id);
+        if (idx >= 0) localSurveys[idx] = data;
+        else localSurveys.push(data);
+        updateCountBadge();
+        if (document.getElementById('listModal').classList.contains('show')) renderListModal();
+    }
+}
+
+function syncOfflineData() {
+    if (!navigator.onLine) return;
+
+    let offlineList = getOfflineSurveys();
+    if (offlineList.length === 0) return;
+
+    const statusText = document.getElementById('submitText');
+    const original = statusText ? statusText.innerText : 'Lưu';
+    if (statusText) statusText.innerText = `Đang đồng bộ (${offlineList.length})...`;
+
+    // Lấy 1 record ra sync
+    const record = offlineList.shift();
+    const action = record._offlineAction;
+    const recordId = record.id;
+
+    // Xóa metadata offline
+    delete record._offlineAction;
+    delete record._offlineTimestamp;
+
+    let promise;
+    if (action === 'delete') {
+        promise = surveysRef.child(recordId).remove();
+    } else if (action === 'update') {
+        delete record.id;
+        promise = surveysRef.child(recordId).update(record);
+    } else { // add
+        delete record.id;
+        if (recordId.startsWith('offline_')) {
+            promise = surveysRef.push(record);
+        } else {
+            promise = surveysRef.child(recordId).set(record);
+        }
+    }
+
+    promise.then(() => {
+        // Thành công 1 cái -> Lưu phần còn lại và gọi lại hàm (để xử lý cái tiếp theo)
+        localStorage.setItem('OFFLINE_SURVEYS', JSON.stringify(offlineList));
+        syncOfflineData();
+    }).catch(e => {
+        console.error("Lỗi sync: ", e);
+        // Lỗi thì trả lại vào mảng
+        record._offlineAction = action;
+        record.id = recordId;
+        offlineList.unshift(record);
+        localStorage.setItem('OFFLINE_SURVEYS', JSON.stringify(offlineList));
+        if (statusText) statusText.innerText = original;
+    });
+
+    if (offlineList.length === 0 && statusText) {
+        showToast("Đã đồng bộ xong dữ liệu ngoại tuyến!");
+        statusText.innerText = original;
+    }
+}
+// ==========================
+
 function getSurveys() {
+    // Nếu rớt mạng và firebase chưa đổ về, lấy cache
+    if (localSurveys.length === 0) {
+        const cached = localStorage.getItem('CACHED_SURVEYS');
+        if (cached) localSurveys = JSON.parse(cached);
+    }
     return localSurveys;
 }
 
@@ -238,6 +352,25 @@ function handleFormSubmit(e) {
 
     const isEdit = document.getElementById('editId').value !== "";
 
+    if (!navigator.onLine) {
+        // OFFLINE MODE
+        if (isEdit) {
+            saveOfflineSurvey(data, 'update');
+        } else {
+            saveOfflineSurvey(data, 'add');
+            e.target.reset();
+            document.getElementById('firewallDeviceWrapper').style.display = 'none';
+            document.getElementById('don_vi_khao_sat').focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        btnSubmit.disabled = false;
+        submitText.innerText = originalText;
+        btnSubmit.style.opacity = 1;
+        return;
+    }
+
+    // ONLINE MODE
     if (isEdit) {
         // Cập nhật lên Firebase
         const recordId = data.id;
@@ -382,17 +515,24 @@ function deleteSurvey(id) {
     if (confirm("Bạn có chắc chắn xóa bản ghi này?")) {
         const password = prompt("Nhập mật khẩu để thực hiện chức năng xóa:");
         if (password === "Vnpt@2026") {
-            surveysRef.child(id).remove()
-                .then(() => {
-                    // Nếu đang sửa thằng này thì hủy sửa
-                    if (document.getElementById('editId').value === id) {
-                        cancelEdit();
-                    }
-                    showToast("Đã xóa bản ghi!");
-                })
-                .catch((error) => {
-                    showToast("Lỗi khi xóa: " + error.message, 'error');
-                });
+            if (!navigator.onLine) {
+                saveOfflineSurvey({ id: id }, 'delete');
+                localSurveys = localSurveys.filter(s => s.id !== id);
+                renderListModal();
+                updateCountBadge();
+            } else {
+                surveysRef.child(id).remove()
+                    .then(() => {
+                        // Nếu đang sửa thằng này thì hủy sửa
+                        if (document.getElementById('editId').value === id) {
+                            cancelEdit();
+                        }
+                        showToast("Đã xóa bản ghi!");
+                    })
+                    .catch((error) => {
+                        showToast("Lỗi khi xóa: " + error.message, 'error');
+                    });
+            }
         } else {
             showToast("Mật khẩu không đúng. Hủy thao tác xóa.", "error");
         }

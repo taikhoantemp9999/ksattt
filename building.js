@@ -84,12 +84,79 @@ suggestionsRef.on('value', (snapshot) => {
         userSuggestions.eqLocations = val.eqLocations || [];
         userSuggestions.eqISPs = val.eqISPs || [];
         userSuggestions.eqPurposes = val.eqPurposes || ["Wifi", "Switch chia mạng"];
+        localStorage.setItem('CACHED_SUGGESTIONS', JSON.stringify(userSuggestions));
         populateDataLists();
     } else {
         // Firebase suggest completely empty
         suggestionsRef.set(userSuggestions);
     }
 });
+
+// ===== LOGIC OFFLINE =====
+function updateNetworkStatus() {
+    const statusDiv = document.getElementById('networkStatus');
+    if (!navigator.onLine) {
+        statusDiv.style.display = 'block';
+    } else {
+        statusDiv.style.display = 'none';
+        syncBuildingsOffline(); // Thử sync
+        syncSuggestionsOffline();
+    }
+}
+window.addEventListener('online', updateNetworkStatus);
+window.addEventListener('offline', updateNetworkStatus);
+updateNetworkStatus();
+
+setInterval(() => {
+    syncBuildingsOffline();
+    syncSuggestionsOffline();
+}, 10000);
+
+let pendingSyncCustomerIds = new Set(JSON.parse(localStorage.getItem('PENDING_BUILDING_SYNC') || '[]'));
+let pendingSuggestions = JSON.parse(localStorage.getItem('PENDING_SUGGESTIONS') || '[]');
+
+function addPendingBuildingSync(cId) {
+    if (cId && cId !== 'unknown') {
+        pendingSyncCustomerIds.add(cId);
+        localStorage.setItem('PENDING_BUILDING_SYNC', JSON.stringify(Array.from(pendingSyncCustomerIds)));
+    }
+}
+
+function syncBuildingsOffline() {
+    if (!navigator.onLine || pendingSyncCustomerIds.size === 0) return;
+
+    // Đồng bộ từng ID
+    Array.from(pendingSyncCustomerIds).forEach(cId => {
+        const localData = localStorage.getItem(`BUILDINGS_LIST_${cId}`);
+        if (localData) {
+            surveysRef.child(cId).child('buildingsArray').set(JSON.parse(localData)).then(() => {
+                pendingSyncCustomerIds.delete(cId);
+                localStorage.setItem('PENDING_BUILDING_SYNC', JSON.stringify(Array.from(pendingSyncCustomerIds)));
+                console.log(`Đồng bộ tòa nhà thành công: ${cId}`);
+            }).catch(console.error);
+        } else {
+            // Không có dữ liệu local thì bỏ qua
+            pendingSyncCustomerIds.delete(cId);
+        }
+    });
+}
+
+function syncSuggestionsOffline() {
+    if (!navigator.onLine || pendingSuggestions.length === 0) return;
+
+    let allSuccess = true;
+    pendingSuggestions.forEach(item => {
+        suggestionsRef.child(item.category).set(item.data).catch(e => {
+            allSuccess = false;
+        });
+    });
+
+    if (allSuccess) {
+        pendingSuggestions = [];
+        localStorage.setItem('PENDING_SUGGESTIONS', JSON.stringify([]));
+    }
+}
+// ==========================
 
 // Đọc thông số Khách hàng từ URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -157,9 +224,20 @@ function saveBuildingsArrayLocally() {
     // Backup offline
     localStorage.setItem(`BUILDINGS_LIST_${customerId}`, JSON.stringify(buildingsArray));
 
+    if (!navigator.onLine) {
+        let pending = new Set(JSON.parse(localStorage.getItem('PENDING_BUILDING_SYNC') || '[]'));
+        pending.add(customerId);
+        localStorage.setItem('PENDING_BUILDING_SYNC', JSON.stringify(Array.from(pending)));
+        showToast("Đã lưu ngoại tuyến", "info");
+        return;
+    }
+
     // Lưu chính thức lên Firebase Cloud
     surveysRef.child(customerId).child('buildingsArray').set(buildingsArray).catch(err => {
         console.error("Lỗi đồng bộ Sơ đồ lên Firebase: ", err);
+        let pending = new Set(JSON.parse(localStorage.getItem('PENDING_BUILDING_SYNC') || '[]'));
+        pending.add(customerId);
+        localStorage.setItem('PENDING_BUILDING_SYNC', JSON.stringify(Array.from(pending)));
     });
 }
 
@@ -208,6 +286,16 @@ window.addEventListener('DOMContentLoaded', () => {
     populateDataLists();
 
     if (customerId === 'unknown') {
+        showListSection();
+        return;
+    }
+
+    if (!navigator.onLine) {
+        buildingsListContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">Đang chế độ Ngoại tuyến. Đọc dữ liệu từ máy...</div>';
+        const localData = localStorage.getItem(`BUILDINGS_LIST_${customerId}`);
+        if (localData) {
+            buildingsArray = JSON.parse(localData);
+        }
         showListSection();
         return;
     }
