@@ -423,6 +423,12 @@ function handleFormSubmit(e) {
 
 // Tính năng Load dữ liệu vào form để sửa
 function loadSurveyToForm(id) {
+    const password = prompt("Nhập mật khẩu để thực hiện chức năng sửa:");
+    if (password !== "Vnpt@2026") {
+        showToast("Mật khẩu không đúng. Hủy thao tác sửa.", "error");
+        return;
+    }
+
     const surveys = getSurveys();
     const survey = surveys.find(s => s.id === id);
     if (!survey) return;
@@ -492,6 +498,14 @@ function loadSurveyToForm(id) {
     document.getElementById('btnOpenBuildingSurvey').onclick = () => {
         window.location.href = `building.html?customerId=${survey.id}&customerName=${encodeURIComponent(survey.don_vi_khao_sat)}`;
     };
+
+    // Nút xem chi tiết ở thanh Edit Alert
+    const btnViewDetailCurrent = document.getElementById('btnViewDetailCurrent');
+    if (btnViewDetailCurrent) {
+        btnViewDetailCurrent.onclick = () => {
+            viewDetail(survey.id);
+        };
+    }
 
     const btnSubmit = document.getElementById('btnSubmit');
     btnSubmit.classList.add('edit-mode');
@@ -614,6 +628,7 @@ function renderListModal() {
                 <span>Nhập lúc: ${date}</span>
             </div>
             <div class="list-item-actions">
+                <button type="button" class="view-item-btn" onclick="viewDetail('${survey.id}')">Chi tiết</button>
                 <button type="button" class="edit-item-btn" onclick="loadSurveyToForm('${survey.id}')">Sửa</button>
                 <button type="button" class="del-item-btn" onclick="deleteSurvey('${survey.id}')">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -622,6 +637,10 @@ function renderListModal() {
         `;
         listContainer.appendChild(item);
     });
+}
+
+function viewDetail(id) {
+    window.open(`detail.html?id=${id}`, '_blank');
 }
 
 // Hiển thị thông báo (toast)

@@ -62,8 +62,13 @@
                 <input type="hidden" id="editId" name="id" value="">
 
                 <div id="editAlert" class="edit-alert" style="display: none;">
-                    <span>Đang ở chế độ chỉnh sửa đơn vị <b id="editingName"></b></span>
-                    <button type="button" id="btnCancelEdit" class="cancel-edit-btn">Hủy & Thêm mới</button>
+                    <div>
+                        <span>Đang ở chế độ chỉnh sửa đơn vị <b id="editingName"></b></span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="btnViewDetailCurrent" class="action-btn view-btn" style="padding: 4px 12px; font-size: 0.8rem;">Xem chi tiết</button>
+                        <button type="button" id="btnCancelEdit" class="cancel-edit-btn">Hủy & Thêm mới</button>
+                    </div>
                 </div>
 
                 <!-- Section 1: Thông tin chung -->

@@ -428,9 +428,15 @@ input:focus {
     gap: 8px;
 }
 
-.edit-item-btn {
+.view-item-btn {
     background-color: var(--primary-light);
     color: var(--primary);
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+.edit-item-btn {
+    background-color: #FEF3C7;
+    color: #D97706;
     padding: 6px 12px;
     font-size: 0.8rem;
 }
