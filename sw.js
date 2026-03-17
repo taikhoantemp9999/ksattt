@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ksattt-v18';
+const CACHE_NAME = 'ksattt-v19';
 const urlsToCache = [
     '/',
     '/login.html',

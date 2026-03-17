@@ -752,8 +752,14 @@ function renderEquipmentsInDrawer(nodeId) {
             <div class="eq-item-detail">📍 ${eq.exactLocation || 'Không ghi rõ vị trí'}</div>
             ${combinedTags}
             <div class="eq-item-detail">🎯 ${eq.purpose || 'Không rõ mục đích'}</div>
+            <button class="eq-item-delete" onclick="openEquipmentForEdit('${eq.id}')" style="right: 34px; background:#e0f2fe; color:#0284c7;" title="Sửa thiết bị">✎</button>
             <button class="eq-item-delete" onclick="deleteEquipment('${eq.id}')">&times;</button>
         `;
+        div.addEventListener('click', (e) => {
+            // tránh click vào nút xóa/sửa bị double
+            if (e.target && (e.target.classList.contains('eq-item-delete'))) return;
+            openEquipmentForEdit(eq.id);
+        });
         equipmentsList.appendChild(div);
     });
 }
@@ -764,6 +770,7 @@ btnAddEquipment.addEventListener('click', () => {
     document.getElementById("eqId").value = '';
     document.getElementById('eqISP').value = ''; // Reset ISP field
     document.getElementById('eqIsMainDevice').checked = false; // Reset Main Device check
+    document.getElementById('eqModalTitle').innerText = 'Thêm Thiết bị';
     equipmentModal.classList.add('active');
 });
 
@@ -774,8 +781,9 @@ btnCloseEqModal.addEventListener('click', () => {
 equipmentForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const newEq = {
-        id: 'eq_' + Date.now(),
+    const eqIdVal = document.getElementById('eqId').value;
+    const payload = {
+        id: eqIdVal || ('eq_' + Date.now()),
         nodeId: currentSelectedNodeId,
         name: document.getElementById('eqName').value,
         model: document.getElementById('eqModel').value,
@@ -786,14 +794,24 @@ equipmentForm.addEventListener('submit', (e) => {
         notes: document.getElementById('eqNotes').value
     };
 
-    buildingData.equipments.push(newEq);
+    if (eqIdVal) {
+        const idx = buildingData.equipments.findIndex(e => e.id === eqIdVal);
+        if (idx !== -1) {
+            // giữ nodeId theo phòng hiện tại
+            buildingData.equipments[idx] = { ...buildingData.equipments[idx], ...payload, nodeId: currentSelectedNodeId };
+        } else {
+            buildingData.equipments.push(payload);
+        }
+    } else {
+        buildingData.equipments.push(payload);
+    }
 
     // Lưu lịch sử nhập liệu cho lần sau gợi ý
-    saveSuggestion('eqNames', newEq.name);
-    saveSuggestion('eqModels', newEq.model);
-    saveSuggestion('eqLocations', newEq.exactLocation);
-    saveSuggestion('eqISPs', newEq.isp);
-    saveSuggestion('eqPurposes', newEq.purpose);
+    saveSuggestion('eqNames', payload.name);
+    saveSuggestion('eqModels', payload.model);
+    saveSuggestion('eqLocations', payload.exactLocation);
+    saveSuggestion('eqISPs', payload.isp);
+    saveSuggestion('eqPurposes', payload.purpose);
 
     // Auto-update room status to ORANGE if not green
     const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
@@ -808,8 +826,27 @@ equipmentForm.addEventListener('submit', (e) => {
     saveBuildingDataLocally(); // Auto save
 
     equipmentModal.classList.remove('active');
-    showToast("Đã lưu thiết bị thành công!");
+    showToast(eqIdVal ? "Đã cập nhật thiết bị!" : "Đã lưu thiết bị thành công!");
 });
+
+// Sửa thiết bị
+window.openEquipmentForEdit = function (eqId) {
+    const eq = buildingData.equipments.find(e => e.id === eqId);
+    if (!eq) return;
+
+    equipmentForm.reset();
+    document.getElementById("eqId").value = eq.id;
+    document.getElementById("eqName").value = eq.name || '';
+    document.getElementById("eqModel").value = eq.model || '';
+    document.getElementById("eqExactLocation").value = eq.exactLocation || '';
+    document.getElementById("eqISP").value = eq.isp || '';
+    document.getElementById("eqPurpose").value = eq.purpose || '';
+    document.getElementById("eqNotes").value = eq.notes || '';
+    document.getElementById("eqIsMainDevice").checked = eq.isMainDevice === true || eq.isMainDevice === "true";
+
+    document.getElementById('eqModalTitle').innerText = 'Sửa Thiết bị';
+    equipmentModal.classList.add('active');
+};
 
 // Xóa thiết bị (Gắn ở inline window context)
 window.deleteEquipment = function (eqId) {
