@@ -23,7 +23,9 @@ const customerLabel = document.getElementById('customerLabel');
 customerLabel.innerText = `Khách hàng: ${customerName}`;
 
 const surveyNoteCard = document.getElementById('surveyNoteCard');
-const surveyNoteText = document.getElementById('surveyNoteText');
+const surveyNoteInput = document.getElementById('surveyNoteInput');
+const btnSaveSurveyNote = document.getElementById('btnSaveSurveyNote');
+const surveyNoteSaveStatus = document.getElementById('surveyNoteSaveStatus');
 
 const canvas = document.getElementById('canvas');
 const gate = document.getElementById('gate');
@@ -31,6 +33,11 @@ const linkLayer = document.getElementById('linkLayer');
 const btnBack = document.getElementById('btnBack');
 const btnSave = document.getElementById('btnSave');
 const btnReset = document.getElementById('btnReset');
+
+const embedOverlay = document.getElementById('embedOverlay');
+const embedFrame = document.getElementById('embedFrame');
+const embedTitle = document.getElementById('embedTitle');
+const btnCloseEmbed = document.getElementById('btnCloseEmbed');
 
 const btnAddISP = document.getElementById('btnAddISP');
 const btnAddLB = document.getElementById('btnAddLB');
@@ -41,11 +48,15 @@ const btnClearLinks = document.getElementById('btnClearLinks');
 btnBack.addEventListener('click', () => window.location.href = 'list.html');
 
 let buildingsArray = [];
-let layout = { buildings: {}, gate: null, network: { nodes: [], links: [] } };
+let layout = { buildings: {}, buildingSizes: {}, gate: null, network: { nodes: [], links: [] } };
 
 let drawMode = false;
 let deleteLinkMode = false;
 let pendingLinkFrom = null; // { type: 'net'|'building'|'gate', id: string }
+
+let currentEmbedBuildingId = null;
+
+let noteSaveTimeout = null;
 
 function clamp(val, min, max) {
     return Math.max(min, Math.min(max, val));
@@ -105,18 +116,102 @@ function buildBlock(bldg, idx) {
 
     div.title = tooltip;
     div.innerHTML = `
+        <div class="edit-btn" title="Sửa tòa nhà">✎</div>
+        <div class="resize-handle" title="Kéo để đổi kích thước">↘</div>
         <div class="building-name">🏢 ${bldg.name || 'Tòa nhà'}</div>
         <div class="building-sub">🏬 ${floorCount} tầng • ${(nodes || []).length} khu vực • ${eqs.length} thiết bị</div>
         <div class="building-sub" style="margin-top:6px;">${ispText}</div>
         <div class="building-note" title="${tooltip}">📝 ${noteShort}</div>
     `;
 
+    // Apply saved size if any
+    if (layout.buildingSizes && layout.buildingSizes[bldg.id]) {
+        const s = layout.buildingSizes[bldg.id];
+        if (s && s.w) div.style.width = `${s.w}px`;
+        if (s && s.h) div.style.height = `${s.h}px`;
+    }
+
     const pos = layout.buildings[bldg.id] || getDefaultPosition(idx);
     setBlockPos(div, pos.x, pos.y);
 
     makeDraggable(div, (x, y) => setBlockPos(div, x, y));
+
+    // Resize handle
+    const handle = div.querySelector('.resize-handle');
+    if (handle) {
+        handle.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            startResizeBuilding(div, bldg.id, e);
+        });
+    }
     return div;
 }
+
+function startResizeBuilding(el, buildingId, startEvent) {
+    if (!el) return;
+    const startW = el.offsetWidth;
+    const startH = el.offsetHeight;
+    const startX = startEvent.clientX;
+    const startY = startEvent.clientY;
+    const minW = 140;
+    const minH = 80;
+    const rect = getCanvasRect();
+
+    const move = (e) => {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const nextW = clamp(snap(startW + dx, 6), minW, rect.width - 12);
+        const nextH = clamp(snap(startH + dy, 6), minH, rect.height - 12);
+        el.style.width = `${nextW}px`;
+        el.style.height = `${nextH}px`;
+        if (!layout.buildingSizes) layout.buildingSizes = {};
+        layout.buildingSizes[buildingId] = { w: nextW, h: nextH };
+        renderLinks();
+    };
+
+    const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        saveToLocal();
+    };
+
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+}
+
+function openBuildingEmbed(buildingId, buildingName) {
+    if (!embedOverlay || !embedFrame) return;
+    currentEmbedBuildingId = buildingId;
+    if (embedTitle) embedTitle.innerText = `Chỉnh sửa: ${buildingName || 'Tòa nhà'}`;
+    // Load building editor in embed mode and focus buildingId
+    embedFrame.src = `building.html?customerId=${encodeURIComponent(customerId)}&customerName=${encodeURIComponent(customerName)}&embed=1&buildingId=${encodeURIComponent(buildingId)}`;
+    embedOverlay.classList.add('active');
+}
+
+function closeBuildingEmbed() {
+    if (!embedOverlay || !embedFrame) return;
+    embedOverlay.classList.remove('active');
+    embedFrame.src = 'about:blank';
+    currentEmbedBuildingId = null;
+    // Reload data to refresh counts/notes after edits
+    loadData();
+}
+
+if (btnCloseEmbed) {
+    btnCloseEmbed.addEventListener('click', closeBuildingEmbed);
+}
+if (embedOverlay) {
+    embedOverlay.addEventListener('click', (e) => {
+        if (e.target === embedOverlay) closeBuildingEmbed();
+    });
+}
+window.addEventListener('message', (e) => {
+    if (!e || !e.data) return;
+    if (e.data.type === 'BUILDING_EMBED_CLOSE') {
+        closeBuildingEmbed();
+    }
+});
 
 function setBlockPos(el, x, y) {
     // Keep inside canvas (leave small margin)
@@ -380,13 +475,60 @@ function render() {
         // Ensure stable id
         if (!b.id) b.id = `bldg_${idx}`;
         const block = buildBlock(b, idx);
-        // click to link in draw mode
         block.dataset.type = 'building';
+        // Click behavior:
+        // - drawMode: click block to link
+        // - normal: do NOT open modal (to allow drag). Open modal via edit button or long-press.
         block.addEventListener('click', (e) => {
-            if (!drawMode) return;
             e.stopPropagation();
-            handleItemClickForLink({ type: 'building', id: b.id });
+            if (deleteLinkMode) return;
+            if (drawMode) {
+                handleItemClickForLink({ type: 'building', id: b.id });
+            }
         });
+
+        // Edit button: open modal
+        const editBtn = block.querySelector('.edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (drawMode || deleteLinkMode) return;
+                openBuildingEmbed(b.id, b.name);
+            });
+            // prevent drag start from edit button
+            editBtn.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Long-press anywhere on block (mobile friendly) to open modal
+        let lpTimer = null;
+        let lpStart = null;
+        const clearLP = () => {
+            if (lpTimer) clearTimeout(lpTimer);
+            lpTimer = null;
+            lpStart = null;
+        };
+        block.addEventListener('pointerdown', (e) => {
+            if (drawMode || deleteLinkMode) return;
+            if (e.target && e.target.closest && e.target.closest('.edit-btn')) return;
+            lpStart = { x: e.clientX, y: e.clientY };
+            lpTimer = setTimeout(() => {
+                openBuildingEmbed(b.id, b.name);
+                clearLP();
+            }, 550);
+        });
+        block.addEventListener('pointermove', (e) => {
+            if (!lpTimer || !lpStart) return;
+            const dx = e.clientX - lpStart.x;
+            const dy = e.clientY - lpStart.y;
+            if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+                clearLP(); // user is dragging
+            }
+        });
+        block.addEventListener('pointerup', clearLP);
+        block.addEventListener('pointercancel', clearLP);
+
         canvas.appendChild(block);
     });
 
@@ -418,7 +560,7 @@ function render() {
 function loadFromLocal() {
     const local = localStorage.getItem(`CAMPUS_LAYOUT_${customerId}`);
     if (local) {
-        try { layout = JSON.parse(local) || { buildings: {}, gate: null, network: { nodes: [], links: [] } }; } catch { /* ignore */ }
+        try { layout = JSON.parse(local) || { buildings: {}, buildingSizes: {}, gate: null, network: { nodes: [], links: [] } }; } catch { /* ignore */ }
     }
 }
 
@@ -444,14 +586,13 @@ async function loadData() {
     }
 
     // Hiển thị ghi chú khảo sát (Mục V trên index)
-    const note = survey.de_xuat ? String(survey.de_xuat).trim() : '';
-    if (surveyNoteCard && surveyNoteText) {
-        if (note) {
-            surveyNoteText.innerText = note;
-            surveyNoteCard.style.display = 'block';
-        } else {
-            surveyNoteCard.style.display = 'none';
-        }
+    const localNote = localStorage.getItem(`CAMPUS_SURVEY_NOTE_${customerId}`);
+    const note = (survey.de_xuat !== undefined && survey.de_xuat !== null)
+        ? String(survey.de_xuat).trim()
+        : (localNote ? String(localNote).trim() : '');
+    if (surveyNoteCard && surveyNoteInput) {
+        surveyNoteCard.style.display = 'block';
+        surveyNoteInput.value = note || '';
     }
 
     buildingsArray = Array.isArray(survey.buildingsArray) ? survey.buildingsArray : [];
@@ -461,11 +602,13 @@ async function loadData() {
     if (survey.campusLayout && typeof survey.campusLayout === 'object') {
         layout = survey.campusLayout;
         if (!layout.buildings) layout.buildings = {};
+        if (!layout.buildingSizes) layout.buildingSizes = {};
         if (!layout.gate) layout.gate = null;
         ensureNetwork();
         saveToLocal();
     } else {
         if (!layout.buildings) layout.buildings = {};
+        if (!layout.buildingSizes) layout.buildingSizes = {};
         if (!layout.gate) layout.gate = null;
         ensureNetwork();
     }
@@ -473,9 +616,36 @@ async function loadData() {
     render();
 }
 
+async function saveSurveyNote() {
+    if (customerId === 'unknown' || !surveyNoteInput) return;
+    const val = String(surveyNoteInput.value || '').trim();
+
+    // Local backup for offline
+    localStorage.setItem(`CAMPUS_SURVEY_NOTE_${customerId}`, val);
+
+    if (!navigator.onLine) {
+        alert('Đang offline: đã lưu ghi chú tạm vào máy. Khi có mạng hãy mở lại để đồng bộ.');
+        return;
+    }
+    try {
+        await surveysRef.child(customerId).child('de_xuat').set(val);
+        if (surveyNoteSaveStatus) {
+            surveyNoteSaveStatus.style.display = 'inline';
+            clearTimeout(noteSaveTimeout);
+            noteSaveTimeout = setTimeout(() => { surveyNoteSaveStatus.style.display = 'none'; }, 2500);
+        }
+    } catch (e) {
+        alert('Lỗi lưu ghi chú: ' + (e && e.message ? e.message : e));
+    }
+}
+
+if (btnSaveSurveyNote) {
+    btnSaveSurveyNote.addEventListener('click', saveSurveyNote);
+}
+
 btnReset.addEventListener('click', () => {
     if (!confirm('Reset bố trí về mặc định?')) return;
-    layout = { buildings: {}, gate: null, network: { nodes: [], links: [] } };
+    layout = { buildings: {}, buildingSizes: {}, gate: null, network: { nodes: [], links: [] } };
     saveToLocal();
     render();
 });

@@ -29,6 +29,8 @@
                 <h1 id="customerNameHeader">Khảo sát Tòa nhà</h1>
             </div>
             <div class="header-actions" style="display: flex; gap: 8px;">
+                <button type="button" id="btnCloseEmbed" class="action-btn"
+                    style="background: rgba(255,255,255,0.2); display: none;">Đóng</button>
                 <button type="button" id="btnBackToList" class="action-btn"
                     style="background: rgba(255,255,255,0.2); display: none;">← Về Danh sách</button>
                 <button type="button" id="btnSaveBuildingMap" class="action-btn save-btn"
@@ -333,7 +335,7 @@
         </div>
     </div>
     </div>
-    <script src="building.js?v=20260317_2"></script>
+    <script src="building.js?v=20260317_3"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {

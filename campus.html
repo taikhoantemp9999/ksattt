@@ -147,6 +147,45 @@
             overflow: visible;
         }
 
+        .building-block .edit-btn {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 1px solid rgba(2,132,199,0.35);
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .building-block .resize-handle {
+            position: absolute;
+            right: -10px;
+            bottom: -10px;
+            width: 30px;
+            height: 30px;
+            border-radius: 999px;
+            border: 1px solid rgba(100,116,139,0.35);
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 900;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            cursor: nwse-resize;
+            user-select: none;
+            z-index: 10;
+            touch-action: none;
+        }
+
         .gate {
             position: absolute;
             left: 12px;
@@ -227,6 +266,54 @@
             line-height: 1.4;
         }
         .hint b { color: #334155; }
+
+        /* Embed modal (edit building) */
+        .embed-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            z-index: 9999;
+        }
+        .embed-overlay.active { display: flex; }
+        .embed-modal {
+            width: min(1100px, 100%);
+            height: min(92vh, 860px);
+            background: #fff;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        .embed-topbar {
+            display:flex;
+            align-items:center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #0f172a;
+            color: #fff;
+            font-weight: 900;
+        }
+        .embed-close {
+            border: none;
+            background: rgba(255,255,255,0.14);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 900;
+        }
+        .embed-iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -240,8 +327,15 @@
 
         <main>
             <div id="surveyNoteCard" class="detail-card" style="display:none; margin-bottom: 12px;">
-                <div style="font-weight: 900; color: var(--primary); margin-bottom: 8px;">V. Ghi chú khảo sát</div>
-                <div id="surveyNoteText" style="white-space: pre-wrap; line-height: 1.55; color: #334155;">-</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom: 8px;">
+                    <div style="font-weight: 900; color: var(--primary);">V. Ghi chú khảo sát</div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span id="surveyNoteSaveStatus" style="display:none; color:#16a34a; font-weight:900; font-size:0.85rem;">✓ Đã lưu</span>
+                        <button id="btnSaveSurveyNote" type="button" class="campus-btn primary" style="padding:8px 10px;">Lưu ghi chú</button>
+                    </div>
+                </div>
+                <textarea id="surveyNoteInput" rows="3" placeholder="Nhập ghi chú khảo sát (Mục V)..."
+                    style="width:100%; border:1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-family: inherit; resize: vertical; background:#f8fafc;"></textarea>
             </div>
 
             <div class="campus-header">
@@ -276,7 +370,18 @@
         </main>
     </div>
 
-    <script src="campus.js?v=20260317_10"></script>
+    <!-- Embed Modal -->
+    <div id="embedOverlay" class="embed-overlay">
+        <div class="embed-modal">
+            <div class="embed-topbar">
+                <div id="embedTitle">Chỉnh sửa tòa nhà</div>
+                <button id="btnCloseEmbed" class="embed-close" type="button">Đóng</button>
+            </div>
+            <iframe id="embedFrame" class="embed-iframe" title="Chỉnh sửa tòa nhà"></iframe>
+        </div>
+    </div>
+
+    <script src="campus.js?v=20260317_14"></script>
 </body>
 </html>
 

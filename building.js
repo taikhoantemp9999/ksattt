@@ -168,10 +168,16 @@ function syncSuggestionsOffline() {
 const urlParams = new URLSearchParams(window.location.search);
 const customerId = urlParams.get('customerId') || 'unknown';
 const customerName = urlParams.get('customerName') || 'Khách hàng chưa rõ';
+const embedMode = urlParams.get('embed') === '1';
+const focusBuildingId = urlParams.get('buildingId');
 
 // Xử lý nút Back trang chính (kèm editId)
 btnBackToMain.addEventListener('click', (e) => {
     e.preventDefault();
+    if (embedMode) {
+        window.parent && window.parent.postMessage({ type: 'BUILDING_EMBED_CLOSE' }, '*');
+        return;
+    }
     if (customerId !== 'unknown') {
         window.location.href = `index.html?editId=${customerId}`;
     } else {
@@ -180,6 +186,15 @@ btnBackToMain.addEventListener('click', (e) => {
 });
 
 document.getElementById('customerNameHeader').innerText = customerName;
+
+// Nút đóng embed
+const btnCloseEmbed = document.getElementById('btnCloseEmbed');
+if (btnCloseEmbed) {
+    btnCloseEmbed.style.display = embedMode ? 'inline-flex' : 'none';
+    btnCloseEmbed.addEventListener('click', () => {
+        window.parent && window.parent.postMessage({ type: 'BUILDING_EMBED_CLOSE' }, '*');
+    });
+}
 
 // Khởi tạo Sơ đồ MỚI
 document.getElementById("btnGenerateMap").addEventListener("click", () => {
@@ -349,6 +364,15 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         showListSection();
+
+        // Nếu có buildingId -> tự mở đúng tòa nhà và nhảy vào map
+        if (focusBuildingId) {
+            setTimeout(() => {
+                if (typeof window.editBuilding === 'function') {
+                    window.editBuilding(focusBuildingId);
+                }
+            }, 0);
+        }
     });
 });
 
