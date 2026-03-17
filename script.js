@@ -548,7 +548,7 @@ function loadSurveyToForm(id) {
     }
 
     // Preview sơ đồ ngay trong index (read-only, group từng tòa nhà)
-    renderBuildingsPreview(survey.buildingsArray);
+    renderBuildingsPreview(survey.buildingsArray, survey.id, survey.don_vi_khao_sat);
     buildingPreviewVisible = false; // mặc định ẩn, bấm "Xem nhanh" mới hiện
     updateBuildingPreviewVisibility();
 
@@ -600,7 +600,7 @@ function updateBuildingPreviewVisibility() {
     btn.innerText = buildingPreviewVisible ? 'Ẩn xem nhanh' : 'Xem nhanh';
 }
 
-function renderBuildingsPreview(buildingsArray) {
+function renderBuildingsPreview(buildingsArray, customerIdForLink, customerNameForLink) {
     const container = document.getElementById('buildingPreviewContainer');
     if (!container) return;
 
@@ -609,7 +609,6 @@ function renderBuildingsPreview(buildingsArray) {
         return;
     }
 
-    const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
     const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
 
     let html = '';
@@ -617,81 +616,41 @@ function renderBuildingsPreview(buildingsArray) {
         const nodes = Array.isArray(bldg.nodes) ? bldg.nodes : [];
         const eqs = Array.isArray(bldg.equipments) ? bldg.equipments : [];
 
-        // Gom theo tầng
-        const floorsMap = {};
-        nodes.forEach(node => {
-            const floor = Number(node.floor || 0);
-            if (!floorsMap[floor]) floorsMap[floor] = [];
-            floorsMap[floor].push(node);
+        const floorCount = new Set(
+            nodes
+                .map(n => (n && n.floor !== undefined) ? Number(n.floor) : null)
+                .filter(v => v !== null && !Number.isNaN(v))
+        ).size;
+
+        const ispLines = eqs
+            .map(e => (e && e.isp ? String(e.isp).trim() : ''))
+            .filter(v => v !== '');
+        const ispCount = ispLines.length;
+        const providerMap = new Map();
+        ispLines.forEach(v => {
+            const key = v.toLowerCase();
+            if (!providerMap.has(key)) providerMap.set(key, v);
         });
+        const ispProviders = Array.from(providerMap.values());
 
-        const floorNums = Object.keys(floorsMap)
-            .map(k => Number(k))
-            .filter(n => !Number.isNaN(n))
-            .sort((a, b) => b - a);
+        const note = bldg.mainNetworkNotes ? String(bldg.mainNetworkNotes).trim() : '';
+        const noteText = note || 'Không có ghi chú tòa nhà';
+        const ispText = ispCount > 0 ? `ISP: ${ispCount} (${ispProviders.join(', ')})` : `ISP: 0`;
 
-        html += `
-            <div class="bldg-card">
-                <h3>${idx + 1}. Tòa nhà: ${safeStr(bldg.name) || '-'}</h3>
-                <div class="bldg-map">
-                    <div class="floors-container">
-        `;
-
-        if (floorNums.length === 0) {
-            html += `<div class="empty-state" style="padding:10px;">Tòa nhà này chưa có sơ đồ khu vực.</div>`;
-        } else {
-            floorNums.forEach(floorNum => {
-                const nodesInFloor = floorsMap[floorNum] || [];
-                const leftNodes = nodesInFloor.filter(n => n.position === 'left');
-                const centerNodes = nodesInFloor.filter(n => n.position === 'center');
-                const rightNodes = nodesInFloor.filter(n => n.position === 'right');
-                const displayNodes = [...leftNodes, ...centerNodes, ...rightNodes];
-
-                html += `
-                    <div class="floor-row">
-                        <div class="floor-title">TẦNG ${floorNum}</div>
-                        <div class="floor-horizontal-scroll">
-                `;
-
-                displayNodes.forEach(node => {
-                    const nodeEqs = eqs.filter(eq => eq.nodeId === node.id);
-                    const eqCount = nodeEqs.length;
-                    const hasIsp = nodeEqs.some(eq => eq.isp && String(eq.isp).trim() !== '');
-                    const hasMainDev = nodeEqs.some(eq => isMainDevice(eq));
-
-                    let extraClass = '';
-                    if (node.type === 'Corridor') extraClass = 'corridor-node';
-                    if (node.type === 'Staircase') extraClass = 'staircase-node';
-                    if (hasIsp) extraClass += (extraClass ? ' ' : '') + 'has-isp-room';
-
-                    let icon = '';
-                    if (node.type === 'Corridor') icon = '🚪 ';
-                    if (node.type === 'Staircase') icon = '🪜 ';
-
-                    const customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
-                    const status = (node.status === 0 || node.status === 1 || node.status === 2) ? node.status : 0;
-                    const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
-                    const tooltip = `${safeStr(node.name)}${noteText}`.trim();
-
-                    html += `
-                        <div class="room-card ${extraClass} status-${status}" title="${tooltip}">
-                            <div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${safeStr(node.name)}</div>
-                            <div class="room-eq-count">💻 ${eqCount}</div>
-                        </div>
-                    `;
-                });
-
-                html += `
-                        </div>
-                    </div>
-                `;
-            });
-        }
+        const bldgId = bldg.id || `bldg_${idx}`;
+        const link = `building.html?customerId=${encodeURIComponent(customerIdForLink || '')}&customerName=${encodeURIComponent(customerNameForLink || '')}&buildingId=${encodeURIComponent(bldgId)}`;
 
         html += `
-                    </div>
+            <a class="quick-bldg" href="${link}" title="Bấm để sửa tòa nhà">
+                <div class="quick-bldg-actions">
+                    <span class="qbtn" title="Sửa">✎</span>
+                    <span class="qbtn" title="Mở trang sửa">↗</span>
                 </div>
-            </div>
+                <div class="quick-bldg-name">🏢 ${safeStr(bldg.name) || '-'}</div>
+                <div class="quick-bldg-meta">🏬 ${floorCount} tầng • ${nodes.length} khu vực • ${eqs.length} thiết bị</div>
+                <div class="quick-bldg-isp">🌐 ${ispText}</div>
+                <div class="quick-bldg-note">📝 ${safeStr(noteText)}</div>
+            </a>
         `;
     });
 
