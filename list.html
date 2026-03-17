@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Danh sách khách hàng - Khảo sát ATTT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <style>
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-weight: 800;
+            color: #334155;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .logout-btn {
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .list-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .primary-small {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .muted {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        .btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .mini-btn {
+            border: 1px solid var(--border);
+            background: #fff;
+            color: #334155;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .mini-btn.danger {
+            border-color: #fecaca;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .mini-btn.primary {
+            border-color: rgba(79,70,229,0.25);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Danh sách khách hàng</h1>
+                <p>Chọn khách hàng để xem chi tiết hoặc chỉnh sửa khảo sát.</p>
+            </div>
+        </header>
+
+        <main>
+            <div class="topbar">
+                <div id="roleBadge" class="role-badge">Đang tải...</div>
+                <button id="btnLogout" class="logout-btn" type="button">Đăng xuất</button>
+            </div>
+
+            <div id="editorActions" class="list-actions" style="display:none;">
+                <button id="btnAddNew" class="primary-small" type="button">+ Thêm mới khảo sát</button>
+            </div>
+
+            <div id="listContainer">
+                <div class="empty-state">Đang tải dữ liệu...</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="auth.js?v=20260317"></script>
+    <script src="list.js?v=20260317"></script>
+</body>
+</html>
+

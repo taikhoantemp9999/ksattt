@@ -14,6 +14,7 @@ const database = firebase.database();
 let currentSurveyData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    requireAuth({ redirectTo: 'login.html' });
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
 
@@ -173,10 +174,144 @@ function renderDetail(data) {
             <div style="white-space: pre-wrap; line-height: 1.6;">${data.de_xuat || "Không có ghi chú."}</div>
         </div>
 
+        ${renderCampusLayoutPreview(data.campusLayout, data.buildingsArray)}
         ${renderBuildingsDetailed(data.buildingsArray)}
     `;
 
     container.innerHTML = html;
+
+    // Vẽ lại dây nối campus sau khi DOM render xong
+    setTimeout(() => {
+        initCampusLayoutPreviewLines(data.campusLayout);
+    }, 0);
+}
+
+function renderCampusLayoutPreview(campusLayout, buildingsArray) {
+    const layout = campusLayout && typeof campusLayout === 'object' ? campusLayout : null;
+    const buildings = Array.isArray(buildingsArray) ? buildingsArray : [];
+    if (!layout) {
+        return '';
+    }
+
+    const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
+
+    const gatePos = layout.gate || { x: 12, y: 520 - 12 - 64 };
+    const network = layout.network || { nodes: [], links: [] };
+    const nodes = Array.isArray(network.nodes) ? network.nodes : [];
+
+    // Render buildings blocks with notes + ISP info + floors
+    const buildingBlocks = buildings.map((b, idx) => {
+        const id = b.id || `bldg_${idx}`;
+        const pos = (layout.buildings && layout.buildings[id]) ? layout.buildings[id] : { x: 12 + idx * 24, y: 12 + idx * 18 };
+
+        const eqs = Array.isArray(b.equipments) ? b.equipments : [];
+        const ispLines = eqs.map(e => (e && e.isp ? String(e.isp).trim() : '')).filter(v => v !== '');
+        const ispCount = ispLines.length;
+        const providerMap = new Map();
+        ispLines.forEach(v => {
+            const key = v.toLowerCase();
+            if (!providerMap.has(key)) providerMap.set(key, v);
+        });
+        const ispProviders = Array.from(providerMap.values());
+        const ispText = ispCount > 0 ? `🌐 ISP: ${ispCount} (${ispProviders.join(', ')})` : `🌐 ISP: 0`;
+
+        const ns = Array.isArray(b.nodes) ? b.nodes : [];
+        const floorCount = new Set(ns.map(n => n && n.floor !== undefined ? Number(n.floor) : null).filter(v => v !== null && !Number.isNaN(v))).size;
+
+        const note = b.mainNetworkNotes ? String(b.mainNetworkNotes).trim() : '';
+        const noteText = note ? note : 'Không có ghi chú tòa nhà';
+
+        const tooltip = `${safeStr(b.name || 'Tòa nhà')}\n🏬 ${floorCount} tầng\n${ispText}${note ? `\n📝 ${note}` : ''}`.trim();
+
+        return `
+            <div class="building-block"
+                 data-type="building"
+                 data-id="${id}"
+                 style="left:${pos.x || 12}px; top:${pos.y || 12}px;"
+                 title="${tooltip}">
+                <div class="building-name">🏢 ${safeStr(b.name) || 'Tòa nhà'}</div>
+                <div class="building-sub">🏬 ${floorCount} tầng • ${ns.length} khu vực • ${eqs.length} thiết bị</div>
+                <div class="building-sub" style="margin-top:6px;">${ispText}</div>
+                <div class="building-note">📝 ${safeStr(noteText)}</div>
+            </div>
+        `;
+    }).join('');
+
+    const netBlocks = nodes.map(n => {
+        if (!n || !n.id) return '';
+        const kind = (n.kind === 'lb') ? 'lb' : 'isp';
+        // fallback title
+        const title = n.title ? String(n.title) : (kind === 'lb' ? '⚖️ CBT' : '🌐 Internet');
+        const x = (n.x !== undefined) ? n.x : 12;
+        const y = (n.y !== undefined) ? n.y : 12;
+        return `
+            <div class="net-node ${kind}" data-type="net" data-id="${n.id}" style="left:${x}px; top:${y}px;">
+                <div class="net-title">${safeStr(title)}</div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="section-header">VI. SƠ ĐỒ BỐ TRÍ TÒA NHÀ</div>
+        <div class="detail-card">
+            <div class="campus-preview-wrap">
+                <div id="campusPreview" class="campus-preview">
+                    <svg id="campusLinkLayer" class="link-layer"></svg>
+                    <div class="gate" data-type="gate" data-id="gate" style="left:${gatePos.x || 12}px; top:${gatePos.y || 12}px;">🚪 CỔNG VÀO</div>
+                    ${netBlocks}
+                    ${buildingBlocks}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function initCampusLayoutPreviewLines(campusLayout) {
+    const layout = campusLayout && typeof campusLayout === 'object' ? campusLayout : null;
+    const wrap = document.getElementById('campusPreview');
+    const svg = document.getElementById('campusLinkLayer');
+    if (!layout || !wrap || !svg) return;
+
+    const network = layout.network || { nodes: [], links: [] };
+    const links = Array.isArray(network.links) ? network.links : [];
+
+    const getCenter = (el) => {
+        const r = el.getBoundingClientRect();
+        const cr = wrap.getBoundingClientRect();
+        return { x: (r.left - cr.left) + r.width / 2, y: (r.top - cr.top) + r.height / 2 };
+    };
+
+    const resolveEl = (it) => {
+        if (!it) return null;
+        // migrate legacy {from:'id'}
+        if (typeof it === 'string') return wrap.querySelector(`.net-node[data-id="${it}"]`);
+        if (it.type === 'net') return wrap.querySelector(`.net-node[data-id="${it.id}"]`);
+        if (it.type === 'building') return wrap.querySelector(`.building-block[data-id="${it.id}"]`);
+        if (it.type === 'gate') return wrap.querySelector(`.gate[data-id="gate"]`);
+        return null;
+    };
+
+    svg.innerHTML = '';
+    const rect = wrap.getBoundingClientRect();
+    svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+
+    links.forEach(l => {
+        if (!l) return;
+        const a = resolveEl(l.from);
+        const b = resolveEl(l.to);
+        if (!a || !b) return;
+        const ca = getCenter(a);
+        const cb = getCenter(b);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', String(ca.x));
+        line.setAttribute('y1', String(ca.y));
+        line.setAttribute('x2', String(cb.x));
+        line.setAttribute('y2', String(cb.y));
+        line.setAttribute('stroke', 'rgba(15, 23, 42, 0.55)');
+        line.setAttribute('stroke-width', '3');
+        line.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(line);
+    });
 }
 
 function renderBuildingsDetailed(buildingsArray) {
@@ -187,7 +322,7 @@ function renderBuildingsDetailed(buildingsArray) {
     const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
     const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
 
-    let buildingsHtml = '<div class="section-header">VI. SƠ ĐỒ TÒA NHÀ & CHI TIẾT THIẾT BỊ</div>';
+    let buildingsHtml = '<div class="section-header">VII. SƠ ĐỒ TÒA NHÀ & CHI TIẾT THIẾT BỊ</div>';
 
     buildingsArray.forEach((bldg, index) => {
         buildingsHtml += `
@@ -258,10 +393,12 @@ function renderBuildingsDetailed(buildingsArray) {
 
                     const customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
                     const status = (node.status === 0 || node.status === 1 || node.status === 2) ? node.status : 0;
+                    const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
+                    const tooltip = `${safeStr(node.name)}${noteText}`.trim();
 
                     buildingsHtml += `
-                        <div class="room-card ${extraClass} status-${status}" title="${safeStr(node.name)}">
-                            <div class="room-name" style="${customNameStyle}">${icon}${safeStr(node.name)}</div>
+                        <div class="room-card ${extraClass} status-${status}" title="${tooltip}">
+                            <div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${safeStr(node.name)}</div>
                             <div class="room-eq-count">💻 ${eqCount}</div>
                         </div>
                     `;

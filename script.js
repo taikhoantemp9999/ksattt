@@ -31,12 +31,21 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const surveysRef = database.ref('surveys_ATTT');
 
+// ===== Simple login guard (role-based) =====
+const auth = (typeof requireAuth === 'function') ? requireAuth({ redirectTo: 'login.html' }) : null;
+if (auth && auth.role !== 'editor') {
+    // Viewer should not use index page for add/edit
+    window.location.href = 'list.html';
+}
+
 // Biến lưu trữ tại client
 let localSurveys = [];
 const urlParams = new URLSearchParams(window.location.search);
 const preloadEditId = urlParams.get('editId');
+const pageMode = urlParams.get('mode'); // 'new' to stay on index for add-new
 let hasAutoLoadedPreload = false;
-let editPasswordVerified = sessionStorage.getItem('EDIT_PASS_OK') === '1'; // chỉ hỏi pass sửa 1 lần / phiên tab
+
+let buildingPreviewVisible = false;
 
 // Lắng nghe dữ liệu realtime từ Firebase
 surveysRef.on('value', (snapshot) => {
@@ -68,6 +77,11 @@ surveysRef.on('value', (snapshot) => {
     }
 });
 
+// Nếu refresh/visit index không ở chế độ sửa hoặc tạo mới -> về danh sách
+if (!preloadEditId && pageMode !== 'new') {
+    window.location.replace('list.html');
+}
+
 // Khởi tạo
 document.addEventListener('DOMContentLoaded', () => {
     renderHtttCheckboxes(false); // Sửa lại thành false để KHÔNG tự động tick khi F5 màn hình trắng
@@ -78,11 +92,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btnExport').addEventListener('click', exportToExcel);
 
+    const btnToggleBuildingPreview = document.getElementById('btnToggleBuildingPreview');
+    if (btnToggleBuildingPreview) {
+        btnToggleBuildingPreview.addEventListener('click', () => {
+            buildingPreviewVisible = !buildingPreviewVisible;
+            updateBuildingPreviewVisibility();
+        });
+    }
+
     // Nút danh sách và Modal
     document.getElementById('btnViewList').addEventListener('click', openListModal);
     document.getElementById('btnCloseModal').addEventListener('click', closeListModal);
     document.getElementById('btnClearData').addEventListener('click', clearAllData);
     document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
+    const btnBackToCustomerList = document.getElementById('btnBackToCustomerList');
+    if (btnBackToCustomerList) {
+        btnBackToCustomerList.addEventListener('click', () => {
+            window.location.href = 'list.html';
+        });
+    }
 
     // Nút Quản lý hệ thống TT
     document.getElementById('btnManageHttt').addEventListener('click', openManageHtttModal);
@@ -350,6 +378,10 @@ function getFormData() {
 // Xử lý Submit
 function handleFormSubmit(e) {
     e.preventDefault();
+    if (!auth || auth.role !== 'editor') {
+        showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
+        return;
+    }
     const data = getFormData();
 
     // Vô hiệu hóa nút lưu tạm thời
@@ -424,14 +456,9 @@ function handleFormSubmit(e) {
 
 // Tính năng Load dữ liệu vào form để sửa
 function loadSurveyToForm(id) {
-    if (!editPasswordVerified) {
-        const password = prompt("Nhập mật khẩu để thực hiện chức năng sửa:");
-        if (password !== "Vnpt@2026") {
-            showToast("Mật khẩu không đúng. Hủy thao tác sửa.", "error");
-            return;
-        }
-        editPasswordVerified = true;
-        sessionStorage.setItem('EDIT_PASS_OK', '1');
+    if (!auth || auth.role !== 'editor') {
+        showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
+        return;
     }
 
     const surveys = getSurveys();
@@ -513,6 +540,17 @@ function loadSurveyToForm(id) {
     document.getElementById('btnOpenBuildingSurvey').onclick = () => {
         window.location.href = `building.html?customerId=${survey.id}&customerName=${encodeURIComponent(survey.don_vi_khao_sat)}`;
     };
+    const btnOpenCampusLayout = document.getElementById('btnOpenCampusLayout');
+    if (btnOpenCampusLayout) {
+        btnOpenCampusLayout.onclick = () => {
+            window.location.href = `campus.html?customerId=${survey.id}&customerName=${encodeURIComponent(survey.don_vi_khao_sat)}`;
+        };
+    }
+
+    // Preview sơ đồ ngay trong index (read-only, group từng tòa nhà)
+    renderBuildingsPreview(survey.buildingsArray);
+    buildingPreviewVisible = false; // mặc định ẩn, bấm "Xem nhanh" mới hiện
+    updateBuildingPreviewVisibility();
 
     // Nút xem chi tiết ở thanh Edit Alert
     const btnViewDetailCurrent = document.getElementById('btnViewDetailCurrent');
@@ -546,37 +584,144 @@ function cancelEdit() {
 
     // Ẩn nút Sơ đồ tòa nhà
     document.getElementById('buildingSurveyWrapper').style.display = 'none';
+    buildingPreviewVisible = false;
+    updateBuildingPreviewVisibility();
 
     const btnSubmit = document.getElementById('btnSubmit');
     btnSubmit.classList.remove('edit-mode');
     document.getElementById('submitText').innerText = "Lưu Khảo Sát Mới";
 }
 
+function updateBuildingPreviewVisibility() {
+    const container = document.getElementById('buildingPreviewContainer');
+    const btn = document.getElementById('btnToggleBuildingPreview');
+    if (!container || !btn) return;
+    container.style.display = buildingPreviewVisible ? 'block' : 'none';
+    btn.innerText = buildingPreviewVisible ? 'Ẩn xem nhanh' : 'Xem nhanh';
+}
+
+function renderBuildingsPreview(buildingsArray) {
+    const container = document.getElementById('buildingPreviewContainer');
+    if (!container) return;
+
+    if (!buildingsArray || !Array.isArray(buildingsArray) || buildingsArray.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:10px;">Chưa có dữ liệu sơ đồ tòa nhà.</div>`;
+        return;
+    }
+
+    const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
+    const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
+
+    let html = '';
+    buildingsArray.forEach((bldg, idx) => {
+        const nodes = Array.isArray(bldg.nodes) ? bldg.nodes : [];
+        const eqs = Array.isArray(bldg.equipments) ? bldg.equipments : [];
+
+        // Gom theo tầng
+        const floorsMap = {};
+        nodes.forEach(node => {
+            const floor = Number(node.floor || 0);
+            if (!floorsMap[floor]) floorsMap[floor] = [];
+            floorsMap[floor].push(node);
+        });
+
+        const floorNums = Object.keys(floorsMap)
+            .map(k => Number(k))
+            .filter(n => !Number.isNaN(n))
+            .sort((a, b) => b - a);
+
+        html += `
+            <div class="bldg-card">
+                <h3>${idx + 1}. Tòa nhà: ${safeStr(bldg.name) || '-'}</h3>
+                <div class="bldg-map">
+                    <div class="floors-container">
+        `;
+
+        if (floorNums.length === 0) {
+            html += `<div class="empty-state" style="padding:10px;">Tòa nhà này chưa có sơ đồ khu vực.</div>`;
+        } else {
+            floorNums.forEach(floorNum => {
+                const nodesInFloor = floorsMap[floorNum] || [];
+                const leftNodes = nodesInFloor.filter(n => n.position === 'left');
+                const centerNodes = nodesInFloor.filter(n => n.position === 'center');
+                const rightNodes = nodesInFloor.filter(n => n.position === 'right');
+                const displayNodes = [...leftNodes, ...centerNodes, ...rightNodes];
+
+                html += `
+                    <div class="floor-row">
+                        <div class="floor-title">TẦNG ${floorNum}</div>
+                        <div class="floor-horizontal-scroll">
+                `;
+
+                displayNodes.forEach(node => {
+                    const nodeEqs = eqs.filter(eq => eq.nodeId === node.id);
+                    const eqCount = nodeEqs.length;
+                    const hasIsp = nodeEqs.some(eq => eq.isp && String(eq.isp).trim() !== '');
+                    const hasMainDev = nodeEqs.some(eq => isMainDevice(eq));
+
+                    let extraClass = '';
+                    if (node.type === 'Corridor') extraClass = 'corridor-node';
+                    if (node.type === 'Staircase') extraClass = 'staircase-node';
+                    if (hasIsp) extraClass += (extraClass ? ' ' : '') + 'has-isp-room';
+
+                    let icon = '';
+                    if (node.type === 'Corridor') icon = '🚪 ';
+                    if (node.type === 'Staircase') icon = '🪜 ';
+
+                    const customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
+                    const status = (node.status === 0 || node.status === 1 || node.status === 2) ? node.status : 0;
+                    const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
+                    const tooltip = `${safeStr(node.name)}${noteText}`.trim();
+
+                    html += `
+                        <div class="room-card ${extraClass} status-${status}" title="${tooltip}">
+                            <div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${safeStr(node.name)}</div>
+                            <div class="room-eq-count">💻 ${eqCount}</div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
 // Xóa một survey
 function deleteSurvey(id) {
+    if (!auth || auth.role !== 'editor') {
+        showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
+        return;
+    }
     if (confirm("Bạn có chắc chắn xóa bản ghi này?")) {
-        const password = prompt("Nhập mật khẩu để thực hiện chức năng xóa:");
-        if (password === "Vnpt@2026") {
-            if (!navigator.onLine) {
-                saveOfflineSurvey({ id: id }, 'delete');
-                localSurveys = localSurveys.filter(s => s.id !== id);
-                renderListModal();
-                updateCountBadge();
-            } else {
-                surveysRef.child(id).remove()
-                    .then(() => {
-                        // Nếu đang sửa thằng này thì hủy sửa
-                        if (document.getElementById('editId').value === id) {
-                            cancelEdit();
-                        }
-                        showToast("Đã xóa bản ghi!");
-                    })
-                    .catch((error) => {
-                        showToast("Lỗi khi xóa: " + error.message, 'error');
-                    });
-            }
+        if (!navigator.onLine) {
+            saveOfflineSurvey({ id: id }, 'delete');
+            localSurveys = localSurveys.filter(s => s.id !== id);
+            renderListModal();
+            updateCountBadge();
         } else {
-            showToast("Mật khẩu không đúng. Hủy thao tác xóa.", "error");
+            surveysRef.child(id).remove()
+                .then(() => {
+                    // Nếu đang sửa thằng này thì hủy sửa
+                    if (document.getElementById('editId').value === id) {
+                        cancelEdit();
+                    }
+                    showToast("Đã xóa bản ghi!");
+                })
+                .catch((error) => {
+                    showToast("Lỗi khi xóa: " + error.message, 'error');
+                });
         }
     }
 }
@@ -587,19 +732,18 @@ function clearAllData() {
     if (surveys.length === 0) return;
 
     if (confirm(`Bạn có chắc muốn xóa TẤT CẢ ${surveys.length} bản ghi trên Cơ sở dữ liệu? Hành động này không thể hoàn tác!`)) {
-        const password = prompt("Nhập mật khẩu để thực hiện chức năng xóa:");
-        if (password === "Vnpt@2026") {
-            surveysRef.remove()
-                .then(() => {
-                    cancelEdit();
-                    showToast('Đã xóa tất cả dữ liệu từ Firebase!');
-                })
-                .catch((error) => {
-                    showToast("Lỗi khi xóa: " + error.message, 'error');
-                });
-        } else {
-            showToast("Mật khẩu không đúng. Hủy thao tác xóa.", "error");
+        if (!auth || auth.role !== 'editor') {
+            showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
+            return;
         }
+        surveysRef.remove()
+            .then(() => {
+                cancelEdit();
+                showToast('Đã xóa tất cả dữ liệu từ Firebase!');
+            })
+            .catch((error) => {
+                showToast("Lỗi khi xóa: " + error.message, 'error');
+            });
     }
 }
 

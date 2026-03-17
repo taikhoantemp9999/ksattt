@@ -66,6 +66,8 @@
                         <span>Đang ở chế độ chỉnh sửa đơn vị <b id="editingName"></b></span>
                     </div>
                     <div style="display: flex; gap: 8px;">
+                        <button type="button" id="btnBackToCustomerList" class="action-btn"
+                            style="padding: 4px 12px; font-size: 0.8rem; background:#0f172a;">Về danh sách</button>
                         <button type="button" id="btnViewDetailCurrent" class="action-btn view-btn" style="padding: 4px 12px; font-size: 0.8rem;">Xem chi tiết</button>
                         <button type="button" id="btnCancelEdit" class="cancel-edit-btn">Hủy & Thêm mới</button>
                     </div>
@@ -87,8 +89,17 @@
                                 <p style="font-size: 0.8rem; color: #475569; margin: 2px 0 0 0;">Quản lý vị trí thiết bị
                                     chi tiết</p>
                             </div>
-                            <button type="button" id="btnOpenBuildingSurvey" class="primary-btn"
-                                style="width: auto; padding: 8px 16px; font-size: 0.85rem;">Mở Sơ đồ</button>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button type="button" id="btnToggleBuildingPreview" class="action-btn"
+                                    style="background:#f1f5f9; color:#0284c7; border:1px solid #cbd5e1; font-size:0.85rem; padding:8px 12px; border-radius:8px; font-weight:700;">Xem nhanh</button>
+                                <button type="button" id="btnOpenCampusLayout" class="action-btn"
+                                    style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:0.85rem; padding:8px 12px; border-radius:8px; font-weight:800;">Bố trí tòa nhà</button>
+                                <button type="button" id="btnOpenBuildingSurvey" class="primary-btn"
+                                    style="width: auto; padding: 8px 16px; font-size: 0.85rem;">Mở Sơ đồ</button>
+                            </div>
+                        </div>
+                        <div id="buildingPreviewContainer" class="bldg-preview" style="display:none; margin-top: 12px;">
+                            <div class="empty-state" style="padding:10px;">Chưa có dữ liệu sơ đồ tòa nhà.</div>
                         </div>
                     </div>
                 </section>
@@ -318,7 +329,8 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast">Đã lưu thành công!</div>
 
-    <script src="script.js?v=20260316"></script>
+    <script src="auth.js?v=20260317"></script>
+    <script src="script.js?v=20260317"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {

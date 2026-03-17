@@ -195,7 +195,7 @@ input:focus, select:focus, textarea:focus {
 /* Floor Container */
 .floors-container {
     display: flex;
-    flex-direction: column-reverse; /* Đảo ngược để tầng cao nhất ở trên */
+    flex-direction: column; /* Tầng cao ở trên, tầng 1 ở dưới (đã sort trong JS) */
     gap: 16px;
 }
 

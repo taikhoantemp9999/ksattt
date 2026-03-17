@@ -1,4 +1,6 @@
 // Trạng thái bộ nhớ tạm thời cho Mock Data
+requireAuth({ allowRoles: ['editor'], redirectTo: 'login.html' });
+
 let buildingsArray = []; // Mảng chứa nhiều Tòa nhà
 let buildingData = {
     id: null,
@@ -22,6 +24,7 @@ const floorsContainer = document.getElementById("floorsContainer");
 
 const roomDrawer = document.getElementById("roomDrawer");
 const drawerRoomNameInput = document.getElementById("drawerRoomNameInput");
+const roomNotes = document.getElementById("roomNotes");
 
 const roomCompletedToggle = document.getElementById("roomCompletedToggle");
 const btnCloseDrawer = document.getElementById("btnCloseDrawer");
@@ -202,8 +205,8 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
     let nodeIdCounter = 1;
     for (let f = 1; f <= numFloors; f++) {
         if (template === 'standard') {
-            buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Corridor', name: `Hành lang Tầng ${f}`, status: 0, position: 'center' });
-            buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Staircase', name: `Cầu thang Tầng ${f}`, status: 0, position: 'center' });
+            buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Corridor', name: `Hành lang Tầng ${f}`, status: 0, position: 'center', notes: '' });
+            buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Staircase', name: `Cầu thang Tầng ${f}`, status: 0, position: 'center', notes: '' });
         }
 
         const centerIdx = Math.ceil(numRooms / 2);
@@ -211,7 +214,7 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
             let roomNumber = (f * 100) + r;
             let pos = (template === 'standard' && r > centerIdx) ? 'right' : 'left';
             if (template !== 'standard') pos = 'left';
-            buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Room', name: `Phòng ${roomNumber}`, status: 0, position: pos });
+            buildingData.nodes.push({ id: `node_${nodeIdCounter++}`, floor: f, type: 'Room', name: `Phòng ${roomNumber}`, status: 0, position: pos, notes: '' });
         }
     }
 
@@ -572,7 +575,10 @@ function renderMap() {
 
             let customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
 
-            card.innerHTML = `<div class="room-name" style="${customNameStyle}" title="${node.name}">${icon}${node.name}</div><div class="room-eq-count">💻 ${eqCount}</div>`;
+            const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
+            const tooltip = `${node.name || ''}${noteText}`.trim();
+            card.title = tooltip;
+            card.innerHTML = `<div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${node.name}</div><div class="room-eq-count">💻 ${eqCount}</div>`;
             card.addEventListener('click', () => openRoomDrawer(node.id));
 
             scrollDiv.appendChild(card);
@@ -650,6 +656,7 @@ function openRoomDrawer(nodeId) {
 
     drawerRoomNameInput.value = node.name;
     roomCompletedToggle.checked = node.status === 2; // Xanh là checked
+    if (roomNotes) roomNotes.value = node.notes || '';
 
     // Style toggle area dựa trên trạng thái
     updateToggleUI();
@@ -673,6 +680,20 @@ drawerRoomNameInput.addEventListener('change', (e) => {
         showToast("Đã lưu tên khu vực!");
     }
 });
+
+// Lưu ghi chú phòng/khu vực
+if (roomNotes) {
+    roomNotes.addEventListener('change', (e) => {
+        const val = (e.target.value || '').trim();
+        const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
+        if (node) {
+            node.notes = val;
+            renderMap();
+            saveBuildingDataLocally();
+            showToast("Đã lưu ghi chú khu vực!");
+        }
+    });
+}
 
 function updateToggleUI() {
     const toggleCard = document.querySelector('.status-toggle-card');
@@ -833,10 +854,10 @@ window.addNewFloor = function () {
         if (!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
     });
 
-    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Corridor', name: `Hành lang Tầng ${nextFloor}`, status: 0, position: 'center' });
-    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Staircase', name: `Cầu thang Tầng ${nextFloor}`, status: 0, position: 'center' });
-    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Room', name: `P.${nextFloor}01`, status: 0, position: 'left' });
-    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Room', name: `P.${nextFloor}02`, status: 0, position: 'right' });
+    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Corridor', name: `Hành lang Tầng ${nextFloor}`, status: 0, position: 'center', notes: '' });
+    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Staircase', name: `Cầu thang Tầng ${nextFloor}`, status: 0, position: 'center', notes: '' });
+    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Room', name: `P.${nextFloor}01`, status: 0, position: 'left', notes: '' });
+    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: nextFloor, type: 'Room', name: `P.${nextFloor}02`, status: 0, position: 'right', notes: '' });
 
     renderMap();
     saveBuildingDataLocally();
@@ -874,7 +895,7 @@ window.addRoom = function (floorNum, position) {
         if (!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
     });
 
-    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: floorNum, type: 'Room', name: name, status: 0, position: position });
+    buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: floorNum, type: 'Room', name: name, status: 0, position: position, notes: '' });
     renderMap();
     saveBuildingDataLocally();
     showToast(`Đã thêm ${name}!`);

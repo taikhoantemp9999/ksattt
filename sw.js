@@ -1,12 +1,21 @@
-const CACHE_NAME = 'ksattt-v2';
+const CACHE_NAME = 'ksattt-v18';
 const urlsToCache = [
     '/',
+    '/login.html',
+    '/login.js',
+    '/list.html',
+    '/list.js',
+    '/auth.js',
     '/index.html',
+    '/campus.html',
+    '/campus.js',
     '/building.html',
+    '/detail.html',
     '/style.css',
     '/building.css',
     '/script.js',
-    '/building.js'
+    '/building.js',
+    '/detail.js'
 ];
 
 self.addEventListener('install', event => {
