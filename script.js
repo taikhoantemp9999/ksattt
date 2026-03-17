@@ -36,7 +36,7 @@ let localSurveys = [];
 const urlParams = new URLSearchParams(window.location.search);
 const preloadEditId = urlParams.get('editId');
 let hasAutoLoadedPreload = false;
-let editPasswordVerified = false; // chỉ hỏi pass sửa 1 lần / lần mở trang
+let editPasswordVerified = sessionStorage.getItem('EDIT_PASS_OK') === '1'; // chỉ hỏi pass sửa 1 lần / phiên tab
 
 // Lắng nghe dữ liệu realtime từ Firebase
 surveysRef.on('value', (snapshot) => {
@@ -431,6 +431,7 @@ function loadSurveyToForm(id) {
             return;
         }
         editPasswordVerified = true;
+        sessionStorage.setItem('EDIT_PASS_OK', '1');
     }
 
     const surveys = getSurveys();
