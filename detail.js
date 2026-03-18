@@ -191,11 +191,11 @@ function renderDetail(data) {
                             }
                         }
                         return `
-                            <div class="image-item" style="cursor: pointer;" onclick="window.open('${img.url}', '_blank')">
-                                <div class="image-preview-wrapper">
-                                    <img src="${displayUrl}" alt="Field Photo">
+                            <div class="image-item" style="cursor: pointer;" onclick="openLightbox('${displayUrl}')">
+                                <div class="image-preview-wrapper" style="aspect-ratio: 1/1; height: auto;">
+                                    <img src="${displayUrl}" alt="Field Photo" style="width:100%; height:100%; object-fit:cover;">
                                 </div>
-                                <div style="font-size: 0.85rem; color: #475569; margin-top: 4px; line-height: 1.4;">${img.caption || '<em>Không có mô tả</em>'}</div>
+                                <div style="font-size: 0.75rem; color: #475569; margin-top: 4px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${img.caption || '...'}</div>
                             </div>
                         `;
                     }).join('')}
@@ -205,6 +205,12 @@ function renderDetail(data) {
 
         ${renderCampusLayoutPreview(data.campusLayout, data.buildingsArray)}
         ${renderBuildingsDetailed(data.buildingsArray)}
+
+        <!-- Lightbox Modal -->
+        <div id="imageLightbox" class="image-lightbox" onclick="closeLightbox()">
+            <span class="close-lightbox">&times;</span>
+            <img id="lightboxImg" src="" alt="Zoomed Image">
+        </div>
     `;
 
     container.innerHTML = html;
@@ -360,6 +366,30 @@ function renderBuildingsDetailed(buildingsArray) {
                 
                 <div style="margin-bottom: 20px;">
                     <h4 style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 10px;">Cấu trúc & Ghi chú mạng chính:</h4>
+                    
+                    <!-- Building Photos (MỚI) -->
+                    ${(bldg.photos && bldg.photos.length > 0) ? `
+                        <div style="margin-bottom: 16px;">
+                            <div class="image-grid-compact" style="margin-bottom: 12px;">
+                                ${bldg.photos.map(p => {
+                                    let dUrl = p.url;
+                                    if (dUrl.includes('drive.google.com')) {
+                                        const idMatch = dUrl.match(/[-\w]{25,}/);
+                                        if (idMatch) dUrl = `https://lh3.googleusercontent.com/d/${idMatch[0]}`;
+                                    }
+                                    return `
+                                        <div class="image-item" style="cursor: pointer;" onclick="openLightbox('${dUrl}')">
+                                            <div class="image-preview-wrapper" style="aspect-ratio: 1/1; height: 50px;">
+                                                <img src="${dUrl}" alt="Building" style="width:100%; height:100%; object-fit:cover;">
+                                            </div>
+                                            <div style="font-size: 0.65rem; color: #64748b; margin-top: 4px; border-top: 1px solid #f1f5f9; padding-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.caption || '...'}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; white-space: pre-wrap; margin-bottom: 10px;">${bldg.mainNetworkNotes || 'Không có ghi chú mạng chính.'}</div>
                 </div>
 
@@ -534,6 +564,25 @@ function renderBuildingsDetailed(buildingsArray) {
 
     return buildingsHtml;
 }
+
+// Global functions for lightbox
+window.openLightbox = function(url) {
+    const lightbox = document.getElementById('imageLightbox');
+    const img = document.getElementById('lightboxImg');
+    if (lightbox && img) {
+        img.src = url;
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Ngăn scroll
+    }
+};
+
+window.closeLightbox = function() {
+    const lightbox = document.getElementById('imageLightbox');
+    if (lightbox) {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = ''; // Cho phép scroll lại
+    }
+};
 
 function exportEquipmentExcel(surveyData) {
     if (!surveyData || !surveyData.buildingsArray || !Array.isArray(surveyData.buildingsArray)) {

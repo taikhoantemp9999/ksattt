@@ -1,12 +1,15 @@
 // Trạng thái bộ nhớ tạm thời cho Mock Data
 requireAuth({ allowRoles: ['editor'], redirectTo: 'login.html' });
 
+const APPS_SCRIPT_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbzVMCrL3TihVkhqUzOOUurYAhTvzjjXhiiwmdepU1kySfMgJC-sCdP87Kp95h24-pvIow/exec";
+
 let buildingsArray = []; // Mảng chứa nhiều Tòa nhà
 let buildingData = {
     id: null,
     name: "Tòa A",
     nodes: [], // Danh sách phòng / hành lang
-    equipments: [] // Danh sách thiết bị
+    equipments: [], // Danh sách thiết bị
+    photos: [] // Mảng ảnh tòa nhà (MỚI)
 };
 
 let currentSelectedNodeId = null;
@@ -298,6 +301,7 @@ function showMapSection() {
     mapSection.style.display = "block";
     btnBackToList.style.display = "block";
     document.getElementById("btnSaveBuildingMap").style.display = "block";
+    renderBuildingImages(); // Render ảnh tòa nhà
 }
 
 // Gắn event navigation
@@ -344,6 +348,7 @@ window.addEventListener('DOMContentLoaded', () => {
             buildingsArray.forEach(bldg => {
                 if (!bldg.nodes) bldg.nodes = [];
                 if (!bldg.equipments) bldg.equipments = [];
+                if (!bldg.photos) bldg.photos = []; // Init photos if missing
             });
 
             // Backup Local
@@ -463,6 +468,7 @@ window.editBuilding = function (id) {
         // Phục hồi note cũ nếu có
         mainNetworkNotes.value = buildingData.mainNetworkNotes || '';
         renderMap();
+        renderBuildingImages();
         showMapSection();
     }
 };
@@ -1263,3 +1269,159 @@ document.getElementById('importDataFile').addEventListener('change', (e) => {
     };
     reader.readAsText(file);
 });
+
+/* === Building Photos Logic === */
+const buildingImageInput = document.getElementById('buildingImageInput');
+const btnSelectBuildingImages = document.getElementById('btnSelectBuildingImages');
+const buildingImageGrid = document.getElementById('buildingImageGrid');
+
+if (btnSelectBuildingImages) {
+    btnSelectBuildingImages.addEventListener('click', () => {
+        buildingImageInput.click();
+    });
+}
+
+if (buildingImageInput) {
+    buildingImageInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                uploadBuildingImageToDrive(file);
+            }
+        });
+        buildingImageInput.value = ''; // Reset
+    });
+}
+
+function uploadBuildingImageToDrive(file) {
+    // Tên file: [BuildingName]_[Timestamp]_[FileName]
+    const bName = buildingData.name || 'Building';
+    const cleanBName = bName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
+    
+    const now = new Date();
+    const ts = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + "_" + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+    const newName = `${cleanBName}_${ts}_${file.name}`;
+
+    const tempId = 'bimg_' + Date.now() + Math.random().toString(36).substr(2, 5);
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        appendBuildingImageToGrid({
+            id: tempId,
+            urlBase64: base64,
+            uploading: true,
+            caption: ''
+        });
+
+        fetch(APPS_SCRIPT_UPLOAD_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                base64: base64,
+                filename: newName,
+                mimeType: file.type
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const newImg = { url: data.url, caption: '' };
+                if (!buildingData.photos) buildingData.photos = [];
+                buildingData.photos.push(newImg);
+                updateBuildingImageInGrid(tempId, data);
+                saveBuildingDataLocally();
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            const item = document.getElementById(tempId);
+            if (item) item.remove();
+            showToast("Lỗi tải ảnh: " + err.message, "error");
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
+function appendBuildingImageToGrid(imgData) {
+    const item = document.createElement('div');
+    item.className = 'image-item';
+    item.id = imgData.id;
+    
+    let displayUrl = imgData.url || imgData.urlBase64;
+    // Fix Google Drive Link
+    if (displayUrl && displayUrl.includes('drive.google.com')) {
+        const idMatch = displayUrl.match(/[-\w]{25,}/);
+        if (idMatch) displayUrl = `https://lh3.googleusercontent.com/d/${idMatch[0]}`;
+    }
+
+    item.innerHTML = `
+        <div class="image-preview-wrapper">
+            <img src="${displayUrl}" class="img-preview" alt="Building Photo">
+            ${imgData.uploading ? '<div class="uploading-overlay" style="position:absolute; inset:0; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:#0284c7;">Đang tải...</div>' : ''}
+            <button class="btn-remove-image" onclick="deleteBuildingImageLocally('${imgData.id}', '${imgData.url || ''}')">&times;</button>
+        </div>
+        <textarea class="image-description" placeholder="Mô tả ảnh..." onchange="updateBuildingImageCaption('${imgData.url || ''}', this.value)">${imgData.caption || ''}</textarea>
+    `;
+    
+    buildingImageGrid.insertBefore(item, btnSelectBuildingImages);
+}
+
+function updateBuildingImageInGrid(tempId, realData) {
+    const item = document.getElementById(tempId);
+    if (!item) return;
+    
+    const img = item.querySelector('img');
+    const overlay = item.querySelector('.uploading-overlay');
+    const btnDel = item.querySelector('.btn-remove-image');
+    const textarea = item.querySelector('.image-description');
+    
+    let dUrl = realData.url;
+    if (dUrl.includes('drive.google.com')) {
+        const idM = dUrl.match(/[-\w]{25,}/);
+        if (idM) dUrl = `https://lh3.googleusercontent.com/d/${idM[0]}`;
+    }
+    
+    if (img) img.src = dUrl;
+    if (overlay) overlay.remove();
+    
+    if (btnDel) btnDel.setAttribute('onclick', `deleteBuildingImageLocally('${tempId}', '${dUrl}')`);
+    if (textarea) textarea.setAttribute('onchange', `updateBuildingImageCaption('${dUrl}', this.value)`);
+}
+
+window.updateBuildingImageCaption = function(url, caption) {
+    if (!buildingData.photos) return;
+    const img = buildingData.photos.find(i => i.url === url);
+    if (img) {
+        img.caption = caption;
+        saveBuildingDataLocally();
+    }
+};
+
+window.deleteBuildingImageLocally = function(uiId, url) {
+    if (confirm("Xóa ảnh này?")) {
+        const item = document.getElementById(uiId);
+        if (item) item.remove();
+        if (buildingData.photos) {
+            buildingData.photos = buildingData.photos.filter(i => i.url !== url);
+            saveBuildingDataLocally();
+        }
+    }
+};
+
+function renderBuildingImages() {
+    // Clear old items
+    const items = buildingImageGrid.querySelectorAll('.image-item');
+    items.forEach(it => it.remove());
+    
+    if (buildingData.photos) {
+        buildingData.photos.forEach((img, idx) => {
+            appendBuildingImageToGrid({
+                id: 'bimg_loaded_' + idx,
+                url: img.url,
+                caption: img.caption || ''
+            });
+        });
+    }
+}
