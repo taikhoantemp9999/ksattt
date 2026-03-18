@@ -222,6 +222,12 @@
                 <div id="quickCreateRoomsSection" style="display: none; margin-bottom: 16px; padding: 12px; border: 1px dashed #0284c7; border-radius: 8px; background: #f0f9ff;">
                     <h4 style="margin-top: 0; color: #0284c7;">⚡ Tạo Nhanh Phòng (Cho Tầng Này)</h4>
                     <p style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;">Nhập danh sách tên phòng (mỗi dòng 1 phòng) để tạo tự động vào sơ đồ trái/phải trên tầng này.</p>
+                    
+                    <div style="font-size: 0.85rem; color: #475569; margin-bottom: 4px; font-weight: 600;">Gợi ý (Click để đưa vào danh sách đang chọn):</div>
+                    <div id="quickRoomSuggestionsBox" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+                        <!-- JS populate -->
+                    </div>
+
                     <div style="display: flex; gap: 8px;">
                         <textarea id="quickLeftRooms" rows="4" placeholder="Nhập phòng bên Trái...&#10;Phòng 101&#10;Phòng 102" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
                         <textarea id="quickRightRooms" rows="4" placeholder="Nhập phòng bên Phải...&#10;Kho&#10;Phòng Kế toán" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>

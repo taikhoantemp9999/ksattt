@@ -25,6 +25,7 @@ const floorsContainer = document.getElementById("floorsContainer");
 const roomDrawer = document.getElementById("roomDrawer");
 const drawerRoomNameInput = document.getElementById("drawerRoomNameInput");
 const roomNotes = document.getElementById("roomNotes");
+let lastFocusedQuickTextArea = 'quickLeftRooms';
 
 const roomCompletedToggle = document.getElementById("roomCompletedToggle");
 const btnCloseDrawer = document.getElementById("btnCloseDrawer");
@@ -322,6 +323,11 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    const ql = document.getElementById('quickLeftRooms');
+    const qr = document.getElementById('quickRightRooms');
+    if (ql) ql.addEventListener('focus', () => lastFocusedQuickTextArea = 'quickLeftRooms');
+    if (qr) qr.addEventListener('focus', () => lastFocusedQuickTextArea = 'quickRightRooms');
+
     buildingsListContainer.innerHTML = '<div style="padding: 20px; text-align: center;">Đang tải dữ liệu từ Đám mây...</div>';
 
     // Đọc trên Firebase làm Nguồn Chân lý (Source of Truth)
@@ -511,6 +517,38 @@ function populateDataLists() {
             });
         }
     }
+
+    renderQuickRoomChips();
+}
+
+function renderQuickRoomChips() {
+    const container = document.getElementById('quickRoomSuggestionsBox');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    userSuggestions.rooms.forEach(room => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px; cursor: pointer; user-select: none; transition: 0.2s;';
+        chip.innerText = '+ ' + room;
+        chip.title = "Thêm vào danh sách";
+        
+        chip.onmouseover = () => chip.style.background = '#bae6fd';
+        chip.onmouseout = () => chip.style.background = '#e0f2fe';
+        
+        chip.addEventListener('click', () => {
+            const targetArea = document.getElementById(lastFocusedQuickTextArea);
+            if (!targetArea) return;
+            const currentVal = targetArea.value;
+            if (currentVal && !currentVal.endsWith('\n')) {
+                targetArea.value += '\n' + room + '\n';
+            } else {
+                targetArea.value += room + '\n';
+            }
+            targetArea.focus();
+        });
+        
+        container.appendChild(chip);
+    });
 }
 
 // Hàm lưu gợi ý mới đồng bộ lên Firebase
