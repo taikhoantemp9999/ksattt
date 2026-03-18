@@ -45,6 +45,10 @@ const preloadEditId = urlParams.get('editId');
 const pageMode = urlParams.get('mode'); // 'new' to stay on index for add-new
 let hasAutoLoadedPreload = false;
 
+// Cấu hình Google Apps Script Upload
+const APPS_SCRIPT_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbzVMCrL3TihVkhqUzOOUurYAhTvzjjXhiiwmdepU1kySfMgJC-sCdP87Kp95h24-pvIow/exec";
+let uploadedImages = []; // Mảng chứa { url: '', caption: '' }
+
 let buildingPreviewVisible = false;
 
 // Lắng nghe dữ liệu realtime từ Firebase
@@ -152,7 +156,202 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Logic Upload Ảnh
+    const btnSelectImages = document.getElementById('btnSelectImages');
+    const imageInput = document.getElementById('imageInput');
+
+    if (btnSelectImages && imageInput) {
+        btnSelectImages.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', handleImageSelection);
+    }
 });
+
+function handleImageSelection(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    files.forEach(file => {
+        uploadImageToDrive(file);
+    });
+    
+    // Reset input để có thể chọn lại cùng file nếu muốn
+    e.target.value = '';
+}
+
+function uploadImageToDrive(file) {
+    // Lấy tên đơn vị để đặt tên file
+    const unitName = document.getElementsByName('don_vi_khao_sat')[0]?.value || 'KhaoSat';
+    const cleanName = unitName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
+    
+    const now = new Date();
+    const timestamp = now.getFullYear() + 
+                      String(now.getMonth() + 1).padStart(2, '0') + 
+                      String(now.getDate()).padStart(2, '0') + "_" + 
+                      String(now.getHours()).padStart(2, '0') + 
+                      String(now.getMinutes()).padStart(2, '0') + 
+                      String(now.getSeconds()).padStart(2, '0');
+    
+    const newFileName = `${cleanName}_${timestamp}_${file.name}`;
+
+    // Tạo preview tạm thời với trạng thái đang upload
+    const tempId = 'img_' + Date.now() + Math.random().toString(36).substr(2, 5);
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+        const base64 = event.target.result;
+        
+        // Thêm vào UI trạng thái chờ
+        appendImageToGrid({
+            id: tempId,
+            urlBase64: base64, // Dùng base64 để xem trước ngay lập tức
+            uploading: true,
+            caption: ''
+        });
+
+        // Gửi lên Google Apps Script
+        fetch(APPS_SCRIPT_UPLOAD_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                base64: base64,
+                filename: newFileName,
+                mimeType: file.type
+            })
+        })
+        .then(response => {
+            // Apps Script hay redirect (302), fetch sẽ tự follow.
+            // Nếu chết ở đây với lỗi CORS, khả năng cao là do Apps Script chưa 'Deploy' đúng 'Anyone'.
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                // Cập nhật mảng dữ liệu thật
+                const newImg = { url: result.url, previewUrl: result.previewUrl, caption: '' };
+                uploadedImages.push(newImg);
+                
+                // Cập nhật UI: Bỏ trạng thái uploading, gán URL thật
+                updateImageInGrid(tempId, newImg);
+                showToast("Đã tải lên ảnh thành công!");
+            } else {
+                removeImageFromGrid(tempId);
+                showToast("Lỗi tải ảnh: " + result.error, "error");
+            }
+        })
+        .catch(err => {
+            removeImageFromGrid(tempId);
+            showToast("Lỗi kết nối khi tải ảnh!", "error");
+            console.error(err);
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
+function appendImageToGrid(imgData) {
+    const grid = document.getElementById('imageGrid');
+    const btnAdd = document.getElementById('btnSelectImages');
+    
+    const item = document.createElement('div');
+    item.className = 'image-item';
+    item.id = imgData.id || '';
+    
+    item.innerHTML = `
+        <div class="image-preview-wrapper text-center">
+            <img src="${imgData.url || imgData.urlBase64}" alt="Preview">
+            ${imgData.uploading ? '<div class="uploading-overlay">Đang tải...</div>' : ''}
+            <button type="button" class="btn-remove-image" onclick="deleteImageLocally('${imgData.id || ''}', '${imgData.url || ''}')">&times;</button>
+        </div>
+        <textarea class="image-description" placeholder="Mô tả ảnh..." onchange="updateImageCaption('${imgData.url || ''}', this.value)">${imgData.caption || ''}</textarea>
+    `;
+    
+    grid.insertBefore(item, btnAdd);
+}
+
+function updateImageInGrid(tempId, realData) {
+    const item = document.getElementById(tempId);
+    if (!item) return;
+    
+    const img = item.querySelector('img');
+    const overlay = item.querySelector('.uploading-overlay');
+    const btnDel = item.querySelector('.btn-remove-image');
+    const textarea = item.querySelector('.image-description');
+    
+    // Xử lý link Google Drive để hiển thị được trực tiếp
+    let displayUrl = realData.url;
+    if (displayUrl.includes('drive.google.com')) {
+        // Chuyển đổi link sang định dạng lh3 (ổn định hơn cho việc hiển thị ảnh công khai)
+        const fileIdMatch = displayUrl.match(/[-\w]{25,}/);
+        if (fileIdMatch) {
+            displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
+        }
+    }
+    
+    if (img) img.src = displayUrl;
+    if (overlay) overlay.remove();
+    
+    // Cập nhật tham số cho các hàm xử lý
+    const finalUrl = displayUrl;
+    if (btnDel) {
+        btnDel.setAttribute('onclick', `deleteImageLocally('${tempId}', '${finalUrl}')`);
+    }
+    if (textarea) {
+        textarea.setAttribute('onchange', `updateImageCaption('${finalUrl}', this.value)`);
+    }
+    
+    // Cật nhật lại URL trong mảng dữ liệu
+    const imgInArray = uploadedImages.find(i => i.url === realData.url);
+    if (imgInArray) {
+        imgInArray.url = finalUrl;
+    }
+}
+
+function removeImageFromGrid(id) {
+    const item = document.getElementById(id);
+    if (item) item.remove();
+}
+
+window.updateImageCaption = function(url, caption) {
+    const img = uploadedImages.find(i => i.url === url);
+    if (img) img.caption = caption;
+}
+
+window.deleteImageLocally = function(uiId, url) {
+    if (!confirm("Xóa ảnh này khỏi phiếu khảo sát?")) return;
+    
+    // Xóa khỏi mảng dữ liệu
+    uploadedImages = uploadedImages.filter(i => i.url !== url);
+    
+    // Xóa khỏi UI
+    const item = document.getElementById(uiId);
+    if (item) item.remove();
+}
+
+function renderUploadedImages() {
+    // Chỉ dùng khi Load từ Firebase về
+    const grid = document.getElementById('imageGrid');
+    const btnAdd = document.getElementById('btnSelectImages');
+    
+    // Giữ lại nút thêm
+    const items = grid.querySelectorAll('.image-item');
+    items.forEach(it => it.remove());
+    
+    uploadedImages.forEach((img, index) => {
+        const id = 'img_loaded_' + index;
+        
+        let displayUrl = img.url;
+        if (displayUrl.includes('drive.google.com')) {
+            const fileIdMatch = displayUrl.match(/[-\w]{25,}/);
+            if (fileIdMatch) {
+                displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
+            }
+        }
+        
+        appendImageToGrid({
+            id: id,
+            url: displayUrl,
+            caption: img.caption || ''
+        });
+    });
+}
 
 // ===== LOGIC OFFLINE =====
 function updateNetworkStatus() {
@@ -371,7 +570,8 @@ function getFormData() {
                 ho_ten: formData.get('thong_tin_lien_he.cong_an_xa.ho_ten'),
                 so_dien_thoai: formData.get('thong_tin_lien_he.cong_an_xa.so_dien_thoai')
             }
-        }
+        },
+        hinh_anh_hien_truong: uploadedImages
     };
 }
 
@@ -531,6 +731,10 @@ function loadSurveyToForm(id) {
     form.elements['thong_tin_lien_he.cong_an_xa.ho_ten'].value = survey.thong_tin_lien_he.cong_an_xa.ho_ten || "";
     form.elements['thong_tin_lien_he.cong_an_xa.so_dien_thoai'].value = survey.thong_tin_lien_he.cong_an_xa.so_dien_thoai || "";
 
+    // Hình ảnh
+    uploadedImages = Array.isArray(survey.hinh_anh_hien_truong) ? survey.hinh_anh_hien_truong : [];
+    renderUploadedImages();
+
     // Bật hiệu ứng chế độ sửa
     document.getElementById('editAlert').style.display = 'flex';
     document.getElementById('editingName').innerText = survey.don_vi_khao_sat;
@@ -586,6 +790,10 @@ function cancelEdit() {
     document.getElementById('buildingSurveyWrapper').style.display = 'none';
     buildingPreviewVisible = false;
     updateBuildingPreviewVisibility();
+
+    // Xóa ảnh
+    uploadedImages = [];
+    renderUploadedImages();
 
     const btnSubmit = document.getElementById('btnSubmit');
     btnSubmit.classList.remove('edit-mode');

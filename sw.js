@@ -29,10 +29,14 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+    // Bỏ qua các request đến domain khác (như Google Script, Firebase)
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return; 
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Cache hit - return response
                 if (response) {
                     return response;
                 }

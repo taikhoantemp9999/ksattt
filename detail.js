@@ -178,6 +178,31 @@ function renderDetail(data) {
             <div style="white-space: pre-wrap; line-height: 1.6;">${data.de_xuat || "Không có ghi chú."}</div>
         </div>
 
+        <div class="section-header">VI. HÌNH ẢNH HIỆN TRƯỜNG</div>
+        <div class="detail-card">
+            ${(data.hinh_anh_hien_truong && data.hinh_anh_hien_truong.length > 0) ? `
+                <div class="image-grid">
+                    ${data.hinh_anh_hien_truong.map(img => {
+                        let displayUrl = img.url;
+                        if (displayUrl.includes('drive.google.com')) {
+                            const fileIdMatch = displayUrl.match(/[-\w]{25,}/);
+                            if (fileIdMatch) {
+                                displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
+                            }
+                        }
+                        return `
+                            <div class="image-item" style="cursor: pointer;" onclick="window.open('${img.url}', '_blank')">
+                                <div class="image-preview-wrapper">
+                                    <img src="${displayUrl}" alt="Field Photo">
+                                </div>
+                                <div style="font-size: 0.85rem; color: #475569; margin-top: 4px; line-height: 1.4;">${img.caption || '<em>Không có mô tả</em>'}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : '<div class="empty-state">Không có hình ảnh hiện trường được tải lên.</div>'}
+        </div>
+
         ${renderCampusLayoutPreview(data.campusLayout, data.buildingsArray)}
         ${renderBuildingsDetailed(data.buildingsArray)}
     `;
@@ -256,7 +281,7 @@ function renderCampusLayoutPreview(campusLayout, buildingsArray) {
     }).join('');
 
     return `
-        <div class="section-header">VI. SƠ ĐỒ BỐ TRÍ TÒA NHÀ</div>
+        <div class="section-header">VII. SƠ ĐỒ BỐ TRÍ TÒA NHÀ</div>
         <div class="detail-card">
             <div class="campus-preview-wrap">
                 <div id="campusPreview" class="campus-preview">
@@ -326,7 +351,7 @@ function renderBuildingsDetailed(buildingsArray) {
     const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
     const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
 
-    let buildingsHtml = '<div class="section-header">VII. SƠ ĐỒ TÒA NHÀ & CHI TIẾT THIẾT BỊ</div>';
+    let buildingsHtml = '<div class="section-header">VIII. SƠ ĐỒ TÒA NHÀ & CHI TIẾT THIẾT BỊ</div>';
 
     buildingsArray.forEach((bldg, index) => {
         buildingsHtml += `
