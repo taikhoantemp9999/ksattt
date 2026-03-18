@@ -150,6 +150,10 @@ function renderDetail(data) {
                 <div class="detail-value">${data.thong_tin_lien_he.don_vi_van_hanh.chuc_vu || ""}</div>
             </div>
             <div class="detail-row">
+                <div class="detail-label">Địa chỉ</div>
+                <div class="detail-value">${data.thong_tin_lien_he.don_vi_van_hanh.dia_chi || ""}</div>
+            </div>
+            <div class="detail-row">
                 <div class="detail-label">Số điện thoại</div>
                 <div class="detail-value">${data.thong_tin_lien_he.don_vi_van_hanh.so_dien_thoai || ""}</div>
             </div>
@@ -394,12 +398,25 @@ function renderBuildingsDetailed(buildingsArray) {
                     const customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
                     const status = (node.status === 0 || node.status === 1 || node.status === 2) ? node.status : 0;
                     const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
-                    const tooltip = `${safeStr(node.name)}${noteText}`.trim();
+                    const rightText = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `\n🏢 DS Phòng: ${String(node.rightRooms).replace(/\n/g, ', ')}` : '';
+                    const tooltip = `${safeStr(node.name)}${noteText}${rightText}`.trim();
+                    
+                    let noteHtml = '';
+                    const noteContent = (node.notes && String(node.notes).trim() !== '') ? `<div style="margin-bottom: 2px;">📝 ${String(node.notes).trim().replace(/\n/g, '<br>')}</div>` : '';
+                    const rightRoomsContent = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `<div>🏢 ${String(node.rightRooms).trim().replace(/\n/g, '<br>')}</div>` : '';
+                    
+                    if (noteContent || rightRoomsContent) {
+                        noteHtml = `<div style="font-size: 0.75rem; color: #64748b; margin-top: 8px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px; line-height: 1.3; word-break: break-word; text-align: left; width: 100%;">
+                            ${noteContent}
+                            ${rightRoomsContent}
+                        </div>`;
+                    }
 
                     buildingsHtml += `
                         <div class="room-card ${extraClass} status-${status}" title="${tooltip}">
                             <div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${safeStr(node.name)}</div>
-                            <div class="room-eq-count">💻 ${eqCount}</div>
+                            <div class="room-eq-count" style="margin-bottom: 4px;">💻 ${eqCount}</div>
+                            ${noteHtml}
                         </div>
                     `;
                 });

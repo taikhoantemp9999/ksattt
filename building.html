@@ -211,6 +211,13 @@
                     </div>
                 </div>
 
+                <!-- Left/Right Rooms Lists -->
+                <div class="input-group" style="margin-bottom: 16px;">
+                    <label for="roomRightList" style="font-weight: 600; color: #475569;">🏢 Danh sách phòng trực thuộc</label>
+                    <textarea id="roomRightList" rows="6" placeholder="VD: P. Họp&#10;Kho"
+                        style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-family: inherit; resize: vertical; background: #f8fafc;"></textarea>
+                </div>
+
                 <!-- Equipments List -->
                 <div class="equipments-section">
                     <div class="equipments-header">
@@ -257,17 +264,6 @@
                             <!-- Sẽ được populate tự động bằng JS từ lịch sử -->
                         </datalist>
                     </div>
-                    <div class="input-group">
-                        <label>Vị trí chi tiết trên thực tế</label>
-                        <input type="text" id="eqExactLocation" list="eqLocationSuggestions"
-                            placeholder="VD: Chân bàn, Tủ mạng">
-                        <datalist id="eqLocationSuggestions">
-                            <option value="Trên bàn làm việc">
-                            <option value="Dưới gầm bàn">
-                            <option value="Trong tủ mạng (Tường)">
-                            <option value="Treo trần nhà">
-                        </datalist>
-                    </div>
                     <div class="input-group"
                         style="border-left: 3px solid #0284c7; padding-left: 8px; margin-top: 12px; background: rgba(2, 132, 199, 0.05); padding: 8px; border-radius: 4px;">
                         <label style="color: #0284c7; font-weight: 600;">🌐 Đường truyền Internet (ISP) - Nếu có</label>
@@ -282,20 +278,46 @@
                     </div>
                     <div class="input-group">
                         <label>Mục đích sử dụng</label>
-                        <input type="text" id="eqPurpose" list="eqPurposeSuggestions"
-                            placeholder="VD: Cấp mạng phòng Kế toán">
-                        <datalist id="eqPurposeSuggestions">
-                            <option value="Wifi">
-                            <option value="Switch chia mạng">
+                        <div class="radio-group" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Wifi"> Wifi
+                            </label>
+                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Switch chia mạng"> Switch chia mạng
+                            </label>
+                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Cân bằng tải"> Cân bằng tải
+                            </label>
+                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Switch chia mạng và wifi"> Switch chia mạng và wifi
+                            </label>
+                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Chạy camera"> Chạy camera
+                            </label>
+                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Khác"> Khác
+                            </label>
+                        </div>
+                        <input type="text" id="eqPurposeOther" placeholder="Nhập mục đích khác..." style="margin-top: 8px; display: none;">
+                    </div>
+                    <div class="input-group" style="background: rgba(147, 51, 234, 0.05); border-left: 3px solid #9333ea; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="eqIsMainDevice" style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="eqIsMainDevice" style="color: #9333ea; font-weight: 600; margin-bottom: 0; cursor: pointer;">🌟 Đánh dấu là Thiết bị mạng chính</label>
+                    </div>
+                    <div class="input-group">
+                        <label>Vị trí chi tiết trên thực tế</label>
+                        <input type="text" id="eqExactLocation" list="eqLocationSuggestions"
+                            placeholder="VD: Chân bàn, Tủ mạng">
+                        <datalist id="eqLocationSuggestions">
+                            <option value="Trên bàn làm việc">
+                            <option value="Dưới gầm bàn">
+                            <option value="Trong tủ mạng (Tường)">
+                            <option value="Treo trần nhà">
                         </datalist>
                     </div>
                     <div class="input-group">
                         <label>Ghi chú thêm</label>
                         <textarea id="eqNotes" rows="2" placeholder="Tình trạng hỏng hóc, nhãn dán..."></textarea>
-                    </div>
-                    <div class="input-group" style="background: rgba(147, 51, 234, 0.05); border-left: 3px solid #9333ea; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="eqIsMainDevice" style="width: 20px; height: 20px; cursor: pointer;">
-                        <label for="eqIsMainDevice" style="color: #9333ea; font-weight: 600; margin-bottom: 0; cursor: pointer;">🌟 Đánh dấu là Thiết bị mạng chính</label>
                     </div>
                     <button type="submit" class="submit-btn mt-3"
                         style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600;">Lưu

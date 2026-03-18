@@ -45,8 +45,7 @@ let userSuggestions = {
     eqNames: [],
     eqModels: [],
     eqLocations: [],
-    eqISPs: [],
-    eqPurposes: ["Wifi", "Switch chia mạng"]
+    eqISPs: []
 };
 
 // Cấu hình Firebase 
@@ -89,7 +88,6 @@ suggestionsRef.on('value', (snapshot) => {
         userSuggestions.eqModels = val.eqModels || [];
         userSuggestions.eqLocations = val.eqLocations || [];
         userSuggestions.eqISPs = val.eqISPs || [];
-        userSuggestions.eqPurposes = val.eqPurposes || ["Wifi", "Switch chia mạng"];
         localStorage.setItem('CACHED_SUGGESTIONS', JSON.stringify(userSuggestions));
         populateDataLists();
     } else {
@@ -494,8 +492,7 @@ function populateDataLists() {
         'eqNameSuggestions': userSuggestions.eqNames,
         'eqModelSuggestions': userSuggestions.eqModels,
         'eqLocationSuggestions': userSuggestions.eqLocations,
-        'eqISPSuggestions': userSuggestions.eqISPs,
-        'eqPurposeSuggestions': userSuggestions.eqPurposes
+        'eqISPSuggestions': userSuggestions.eqISPs
     };
 
     for (let listId in listMap) {
@@ -600,9 +597,22 @@ function renderMap() {
             let customNameStyle = hasMainDev ? `color: #ef4444 !important; font-weight: 800;` : '';
 
             const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
-            const tooltip = `${node.name || ''}${noteText}`.trim();
+            const rightText = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `\n🏢 DS Phòng: ${String(node.rightRooms).replace(/\n/g, ', ')}` : '';
+            const tooltip = `${node.name || ''}${noteText}${rightText}`.trim();
             card.title = tooltip;
-            card.innerHTML = `<div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${node.name}</div><div class="room-eq-count">💻 ${eqCount}</div>`;
+            
+            let noteHtml = '';
+            const noteContent = (node.notes && String(node.notes).trim() !== '') ? `<div style="margin-bottom: 2px;">📝 ${String(node.notes).trim().replace(/\n/g, '<br>')}</div>` : '';
+            const rightRoomsContent = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `<div>🏢 ${String(node.rightRooms).trim().replace(/\n/g, '<br>')}</div>` : '';
+            
+            if (noteContent || rightRoomsContent) {
+                noteHtml = `<div style="font-size: 0.75rem; color: #64748b; margin-top: 8px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px; line-height: 1.3; word-break: break-word; text-align: left; width: 100%;">
+                    ${noteContent}
+                    ${rightRoomsContent}
+                </div>`;
+            }
+            
+            card.innerHTML = `<div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${node.name}</div><div class="room-eq-count" style="margin-bottom: 4px;">💻 ${eqCount}</div>${noteHtml}`;
             card.addEventListener('click', () => openRoomDrawer(node.id));
 
             scrollDiv.appendChild(card);
@@ -681,6 +691,9 @@ function openRoomDrawer(nodeId) {
     drawerRoomNameInput.value = node.name;
     roomCompletedToggle.checked = node.status === 2; // Xanh là checked
     if (roomNotes) roomNotes.value = node.notes || '';
+    
+    const roomRightList = document.getElementById('roomRightList');
+    if (roomRightList) roomRightList.value = node.rightRooms || '';
 
     // Style toggle area dựa trên trạng thái
     updateToggleUI();
@@ -715,6 +728,21 @@ if (roomNotes) {
             renderMap();
             saveBuildingDataLocally();
             showToast("Đã lưu ghi chú khu vực!");
+        }
+    });
+}
+
+// Lưu DS phòng
+const roomRightListElem = document.getElementById('roomRightList');
+if (roomRightListElem) {
+    roomRightListElem.addEventListener('change', (e) => {
+        const val = (e.target.value || '').trim();
+        const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
+        if (node) {
+            node.rightRooms = val;
+            renderMap();
+            saveBuildingDataLocally();
+            showToast("Đã lưu Danh sách phòng!");
         }
     });
 }
@@ -788,12 +816,30 @@ function renderEquipmentsInDrawer(nodeId) {
     });
 }
 
+// Sự kiện hiện/ẩn field Khác cho radio Mục đích
+document.querySelectorAll('input[name="eqPurposeRadio"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        const otherInput = document.getElementById('eqPurposeOther');
+        if (e.target.value === 'Khác') {
+            otherInput.style.display = 'block';
+            otherInput.focus();
+        } else {
+            otherInput.style.display = 'none';
+        }
+    });
+});
+
 // Logic Form Modal Thêm Thiết Bị
 btnAddEquipment.addEventListener('click', () => {
     equipmentForm.reset();
     document.getElementById("eqId").value = '';
     document.getElementById('eqISP').value = ''; // Reset ISP field
     document.getElementById('eqIsMainDevice').checked = false; // Reset Main Device check
+    
+    document.querySelectorAll('input[name="eqPurposeRadio"]').forEach(r => r.checked = false);
+    document.getElementById('eqPurposeOther').value = '';
+    document.getElementById('eqPurposeOther').style.display = 'none';
+
     document.getElementById('eqModalTitle').innerText = 'Thêm Thiết bị';
     equipmentModal.classList.add('active');
 });
@@ -806,6 +852,16 @@ equipmentForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
     const eqIdVal = document.getElementById('eqId').value;
+    
+    let selectedPurpose = '';
+    const checkedRadio = document.querySelector('input[name="eqPurposeRadio"]:checked');
+    if (checkedRadio) {
+        selectedPurpose = checkedRadio.value;
+        if (selectedPurpose === 'Khác') {
+            selectedPurpose = document.getElementById('eqPurposeOther').value.trim();
+        }
+    }
+
     const payload = {
         id: eqIdVal || ('eq_' + Date.now()),
         nodeId: currentSelectedNodeId,
@@ -814,7 +870,7 @@ equipmentForm.addEventListener('submit', (e) => {
         exactLocation: document.getElementById('eqExactLocation').value,
         isp: document.getElementById('eqISP').value,
         isMainDevice: document.getElementById('eqIsMainDevice').checked,
-        purpose: document.getElementById('eqPurpose').value,
+        purpose: selectedPurpose,
         notes: document.getElementById('eqNotes').value
     };
 
@@ -835,7 +891,6 @@ equipmentForm.addEventListener('submit', (e) => {
     saveSuggestion('eqModels', payload.model);
     saveSuggestion('eqLocations', payload.exactLocation);
     saveSuggestion('eqISPs', payload.isp);
-    saveSuggestion('eqPurposes', payload.purpose);
 
     // Auto-update room status to ORANGE if not green
     const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
@@ -864,9 +919,29 @@ window.openEquipmentForEdit = function (eqId) {
     document.getElementById("eqModel").value = eq.model || '';
     document.getElementById("eqExactLocation").value = eq.exactLocation || '';
     document.getElementById("eqISP").value = eq.isp || '';
-    document.getElementById("eqPurpose").value = eq.purpose || '';
     document.getElementById("eqNotes").value = eq.notes || '';
     document.getElementById("eqIsMainDevice").checked = eq.isMainDevice === true || eq.isMainDevice === "true";
+
+    const purpose = eq.purpose || '';
+    const radios = document.querySelectorAll('input[name="eqPurposeRadio"]');
+    let matched = false;
+    radios.forEach(r => {
+        if (r.value === purpose) {
+            r.checked = true;
+            matched = true;
+        } else {
+            r.checked = false;
+        }
+    });
+    
+    if (purpose && !matched) {
+        document.querySelector('input[name="eqPurposeRadio"][value="Khác"]').checked = true;
+        document.getElementById("eqPurposeOther").value = purpose;
+        document.getElementById("eqPurposeOther").style.display = 'block';
+    } else {
+        document.getElementById("eqPurposeOther").value = '';
+        document.getElementById("eqPurposeOther").style.display = 'none';
+    }
 
     document.getElementById('eqModalTitle').innerText = 'Sửa Thiết bị';
     equipmentModal.classList.add('active');
