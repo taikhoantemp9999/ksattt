@@ -218,6 +218,18 @@
                         style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-family: inherit; resize: vertical; background: #f8fafc;"></textarea>
                 </div>
 
+                <!-- Auto-generate Rooms -->
+                <div id="quickCreateRoomsSection" style="display: none; margin-bottom: 16px; padding: 12px; border: 1px dashed #0284c7; border-radius: 8px; background: #f0f9ff;">
+                    <h4 style="margin-top: 0; color: #0284c7;">⚡ Tạo Nhanh Phòng (Cho Tầng Này)</h4>
+                    <p style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;">Nhập danh sách tên phòng (mỗi dòng 1 phòng) để tạo tự động vào sơ đồ trái/phải trên tầng này.</p>
+                    <div style="display: flex; gap: 8px;">
+                        <textarea id="quickLeftRooms" rows="4" placeholder="Nhập phòng bên Trái...&#10;Phòng 101&#10;Phòng 102" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
+                        <textarea id="quickRightRooms" rows="4" placeholder="Nhập phòng bên Phải...&#10;Kho&#10;Phòng Kế toán" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
+                    </div>
+                    <button type="button" id="btnQuickCreateRooms" class="primary-btn" style="width: 100%; margin-top: 8px; padding: 8px; font-size: 0.9rem; font-weight: bold; background: #0284c7;">Tự động tạo phòng theo danh sách</button>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 6px; text-align: center;">Thao tác này sẽ ngay lập tức sinh thêm các ô Phòng trên lưới.</p>
+                </div>
+
                 <!-- Equipments List -->
                 <div class="equipments-section">
                     <div class="equipments-header">

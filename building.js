@@ -695,12 +695,72 @@ function openRoomDrawer(nodeId) {
     const roomRightList = document.getElementById('roomRightList');
     if (roomRightList) roomRightList.value = node.rightRooms || '';
 
+    const isCenterNode = node.type === 'Corridor' || node.type === 'Staircase' || node.position === 'center';
+    const quickCreateSection = document.getElementById("quickCreateRoomsSection");
+    if (quickCreateSection) {
+        quickCreateSection.style.display = isCenterNode ? 'block' : 'none';
+        document.getElementById("quickLeftRooms").value = '';
+        document.getElementById("quickRightRooms").value = '';
+    }
+
     // Style toggle area dựa trên trạng thái
     updateToggleUI();
 
     renderEquipmentsInDrawer(node.id);
 
     roomDrawer.classList.add('active');
+}
+
+const btnQuickCreateRooms = document.getElementById("btnQuickCreateRooms");
+if (btnQuickCreateRooms) {
+    btnQuickCreateRooms.addEventListener("click", () => {
+        const leftText = document.getElementById("quickLeftRooms").value.trim();
+        const rightText = document.getElementById("quickRightRooms").value.trim();
+        
+        if (!leftText && !rightText) {
+            showToast("Vui lòng nhập danh sách phòng cần tạo!", "error");
+            return;
+        }
+        
+        const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
+        if (!node) return;
+        const floorNum = node.floor;
+        
+        if (!confirm(`Xác nhận: Việc này sẽ XÓA TOÀN BỘ CÁC PHÒNG (và thiết bị bên trong phòng) thuộc Tầng ${floorNum} để tạo mới danh sách. Bạn có chắc chắn?`)) {
+            return;
+        }
+
+        const roomsToDeleteIds = buildingData.nodes.filter(n => n.floor === floorNum && n.type === 'Room').map(n => n.id);
+        buildingData.nodes = buildingData.nodes.filter(n => !(n.floor === floorNum && n.type === 'Room'));
+        buildingData.equipments = buildingData.equipments.filter(eq => !roomsToDeleteIds.includes(eq.nodeId));
+        
+        let createdCount = 0;
+        let maxNodeId = 0;
+        buildingData.nodes.forEach(n => {
+            const idNum = parseInt(n.id.replace('node_', ''));
+            if (!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
+        });
+        
+        const parseAndCreate = (text, position) => {
+            if (!text) return;
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            lines.forEach(name => {
+                buildingData.nodes.push({ id: `node_${++maxNodeId}`, floor: floorNum, type: 'Room', name: name, status: 0, position: position, notes: '' });
+                createdCount++;
+            });
+        };
+        
+        parseAndCreate(leftText, 'left');
+        parseAndCreate(rightText, 'right');
+        
+        if (createdCount >= 0) {
+            document.getElementById("quickLeftRooms").value = '';
+            document.getElementById("quickRightRooms").value = '';
+            renderMap();
+            saveBuildingDataLocally();
+            showToast(`Đã xóa phòng cũ và tạo mới ${createdCount} phòng!`);
+        }
+    });
 }
 
 // Xử lý đổi tên phòng trực tiếp trên Input
