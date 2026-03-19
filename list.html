@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -19,6 +20,7 @@
             gap: 12px;
             margin-bottom: 16px;
         }
+
         .role-badge {
             display: inline-flex;
             align-items: center;
@@ -32,6 +34,7 @@
             font-size: 0.9rem;
             white-space: nowrap;
         }
+
         .logout-btn {
             background: #0f172a;
             color: #fff;
@@ -42,12 +45,14 @@
             cursor: pointer;
             white-space: nowrap;
         }
+
         .list-actions {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             margin-bottom: 14px;
         }
+
         .primary-small {
             background: var(--primary);
             color: #fff;
@@ -57,23 +62,27 @@
             font-weight: 800;
             cursor: pointer;
         }
+
         .card-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 12px;
         }
+
         .muted {
             color: var(--text-muted);
             font-size: 0.85rem;
             margin-top: 4px;
         }
+
         .btns {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             justify-content: flex-end;
         }
+
         .mini-btn {
             border: 1px solid var(--border);
             background: #fff;
@@ -84,18 +93,21 @@
             cursor: pointer;
             font-size: 0.85rem;
         }
+
         .mini-btn.danger {
             border-color: #fecaca;
             background: #fee2e2;
             color: #991b1b;
         }
+
         .mini-btn.primary {
-            border-color: rgba(79,70,229,0.25);
+            border-color: rgba(79, 70, 229, 0.25);
             background: var(--primary-light);
             color: var(--primary);
         }
     </style>
 </head>
+
 <body>
     <div class="app-container">
         <header class="app-header">
@@ -113,6 +125,8 @@
 
             <div id="editorActions" class="list-actions" style="display:none;">
                 <button id="btnAddNew" class="primary-small" type="button">+ Thêm mới khảo sát</button>
+                <button id="btnManageUsers" class="primary-small" style="background:#0f172a; display:none;"
+                    type="button">Quản trị Tài khoản</button>
             </div>
 
             <div id="listContainer">
@@ -124,5 +138,5 @@
     <script src="auth.js?v=20260317"></script>
     <script src="list.js?v=20260317"></script>
 </body>
-</html>
 
+</html>

@@ -1,4 +1,4 @@
-requireAuth({ allowRoles: ['editor'], redirectTo: 'login.html' });
+requireAuth({ allowRoles: ['editor', 'admin'], redirectTo: 'login.html' });
 
 // Firebase config
 const firebaseConfig = {

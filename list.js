@@ -26,11 +26,28 @@ const listContainer = document.getElementById('listContainer');
 
 btnLogout.addEventListener('click', authLogout);
 
-const isEditor = auth && auth.role === 'editor';
+const isEditor = auth && (auth.role === 'editor' || auth.role === 'admin');
+const isAdmin = auth && auth.role === 'admin';
+
 if (roleBadge) {
-    roleBadge.innerText = `Tài khoản: ${auth.user} • Quyền: ${isEditor ? 'Khảo sát' : 'Xem'}`;
+    let roleText = 'Xem';
+    if (auth.role === 'editor') roleText = 'Khảo sát';
+    if (auth.role === 'admin') roleText = 'Quản trị';
+    roleBadge.innerText = `Tài khoản: ${auth.user} • Quyền: ${roleText}`;
 }
-if (editorActions) editorActions.style.display = isEditor ? 'flex' : 'none';
+
+if (editorActions) {
+    editorActions.style.display = isEditor ? 'flex' : 'none';
+    if (isAdmin) {
+        const btnManageUsers = document.getElementById('btnManageUsers');
+        if (btnManageUsers) {
+            btnManageUsers.style.display = 'block';
+            btnManageUsers.addEventListener('click', () => {
+                window.location.href = 'tk.html';
+            });
+        }
+    }
+}
 if (btnAddNew) {
     btnAddNew.addEventListener('click', () => {
         if (!isEditor) return;

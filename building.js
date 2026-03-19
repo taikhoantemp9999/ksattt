@@ -1,5 +1,5 @@
 // Trạng thái bộ nhớ tạm thời cho Mock Data
-requireAuth({ allowRoles: ['editor'], redirectTo: 'login.html' });
+const auth = requireAuth({ allowRoles: ['editor', 'admin'], redirectTo: 'login.html' });
 
 const APPS_SCRIPT_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbzVMCrL3TihVkhqUzOOUurYAhTvzjjXhiiwmdepU1kySfMgJC-sCdP87Kp95h24-pvIow/exec";
 
@@ -1564,6 +1564,13 @@ function updateModelSuggestions() {
 
 // Bind events for auto suggestion
 document.addEventListener('DOMContentLoaded', () => {
+    // Hiển thị nút Quản trị tài khoản nếu là admin
+    const btnManageUsersGlobal = document.getElementById('btnManageUsersGlobal');
+    if (btnManageUsersGlobal && auth && auth.role === 'admin') {
+        btnManageUsersGlobal.style.display = 'inline-flex';
+        btnManageUsersGlobal.addEventListener('click', () => { window.location.href = 'tk.html'; });
+    }
+
     const eqNameInput = document.getElementById('eqName');
     if (eqNameInput) eqNameInput.addEventListener('input', updateModelSuggestions);
 

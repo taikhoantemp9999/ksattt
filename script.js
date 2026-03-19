@@ -33,7 +33,7 @@ const surveysRef = database.ref('surveys_ATTT');
 
 // ===== Simple login guard (role-based) =====
 const auth = (typeof requireAuth === 'function') ? requireAuth({ redirectTo: 'login.html' }) : null;
-if (auth && auth.role !== 'editor') {
+if (auth && auth.role !== 'editor' && auth.role !== 'admin') {
     // Viewer should not use index page for add/edit
     window.location.href = 'list.html';
 }
@@ -139,6 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
     updateNetworkStatus();
+
+    // Hiển thị nút Quản trị tài khoản nếu là admin
+    const btnManageUsersGlobal = document.getElementById('btnManageUsersGlobal');
+    if (btnManageUsersGlobal && auth && auth.role === 'admin') {
+        btnManageUsersGlobal.style.display = 'inline-flex';
+        btnManageUsersGlobal.addEventListener('click', () => { window.location.href = 'tk.html'; });
+    }
 
     // Thử đồng bộ dữ liệu Offline định kỳ (10s/lần)
     setInterval(syncOfflineData, 10000);
@@ -620,11 +627,13 @@ function getFormData() {
 // Xử lý Submit
 function handleFormSubmit(e) {
     e.preventDefault();
-    if (!auth || auth.role !== 'editor') {
+    if (!auth || (auth.role !== 'editor' && auth.role !== 'admin')) {
         showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
         return;
     }
     const data = getFormData();
+
+    const currentUser = auth ? auth.user : "Khách";
 
     // Vô hiệu hóa nút lưu tạm thời
     const btnSubmit = document.getElementById('btnSubmit');
@@ -640,8 +649,11 @@ function handleFormSubmit(e) {
     if (!navigator.onLine) {
         // OFFLINE MODE
         if (isEdit) {
+            data.nguoi_cap_nhat = currentUser;
+            data.thoi_gian_cap_nhat = new Date().toISOString();
             saveOfflineSurvey(data, 'update');
         } else {
+            data.nguoi_tao = currentUser;
             saveOfflineSurvey(data, 'add');
             e.target.reset();
             document.getElementById('firewallDeviceWrapper').style.display = 'none';
@@ -661,6 +673,9 @@ function handleFormSubmit(e) {
         const recordId = data.id;
         delete data.id; // Không cần lưu id vào trong nội dung do nó là key rồi
 
+        data.nguoi_cap_nhat = currentUser;
+        data.thoi_gian_cap_nhat = new Date().toISOString();
+
         surveysRef.child(recordId).update(data)
             .then(() => {
                 showToast('Cập nhật dữ liệu thành công!');
@@ -677,6 +692,8 @@ function handleFormSubmit(e) {
     } else {
         // Thêm mới lên Firebase
         delete data.id;
+        data.nguoi_tao = currentUser;
+
         surveysRef.push(data)
             .then(() => {
                 showToast('Đã thêm mới thành công!');
@@ -698,7 +715,7 @@ function handleFormSubmit(e) {
 
 // Tính năng Load dữ liệu vào form để sửa
 function loadSurveyToForm(id) {
-    if (!auth || auth.role !== 'editor') {
+    if (!auth || auth.role !== 'editor' && auth.role !== 'admin') {
         showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
         return;
     }
@@ -909,7 +926,7 @@ function renderBuildingsPreview(buildingsArray, customerIdForLink, customerNameF
 
 // Xóa một survey
 function deleteSurvey(id) {
-    if (!auth || auth.role !== 'editor') {
+    if (!auth || auth.role !== 'editor' && auth.role !== 'admin') {
         showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
         return;
     }
@@ -941,7 +958,7 @@ function clearAllData() {
     if (surveys.length === 0) return;
 
     if (confirm(`Bạn có chắc muốn xóa TẤT CẢ ${surveys.length} bản ghi trên Cơ sở dữ liệu? Hành động này không thể hoàn tác!`)) {
-        if (!auth || auth.role !== 'editor') {
+        if (!auth || auth.role !== 'editor' && auth.role !== 'admin') {
             showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
             return;
         }

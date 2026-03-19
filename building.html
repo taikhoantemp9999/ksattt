@@ -29,6 +29,17 @@
                 <h1 id="customerNameHeader">Khảo sát Tòa nhà</h1>
             </div>
             <div class="header-actions" style="display: flex; gap: 8px;">
+                <button type="button" id="btnManageUsersGlobal" class="action-btn"
+                    style="display:none; background:#0f172a; color:#fff; border: 1px solid #1e293b;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Quản trị
+                </button>
                 <button type="button" id="btnCloseEmbed" class="action-btn"
                     style="background: rgba(255,255,255,0.2); display: none;">Đóng</button>
                 <button type="button" id="btnBackToList" class="action-btn"
@@ -127,7 +138,7 @@
                     <label for="mainNetworkNotes"
                         style="display: block; font-weight: 600; color: #9333ea; margin-bottom: 8px;">🌟 Ghi chú Luồng
                         Tuyến Cáp Mạng Chính (Từ đâu đến đâu)</label>
-                    <textarea id="mainNetworkNotes" rows="2"
+                    <textarea id="mainNetworkNotes" rows="6"
                         placeholder="Ví dụ: Tầng 1 (Modem Viettel) -> Kéo lên Tầng 3 (Phòng Server) -> Chia ra Switch Tầng 4..."
                         style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; font-family: inherit; resize: vertical;"></textarea>
 

@@ -1,10 +1,5 @@
-// Simple client-side auth (no Firebase Auth)
-// Roles: editor (khaosat) / viewer (xem)
-
-const AUTH_USERS = {
-    khaosat: { password: "Vnpt@2026", role: "editor", displayName: "Khảo sát" },
-    xem: { password: "Vnpt!1468", role: "viewer", displayName: "Xem" }
-};
+// Simple client-side auth (via Firebase mapping)
+// Roles: admin (quản trị) / editor (khảo sát) / viewer (chỉ xem)
 
 const AUTH_KEYS = {
     user: "AUTH_USER",
@@ -20,16 +15,11 @@ function authGet() {
     return { user, role, at };
 }
 
-function authLogin(username, password) {
-    const u = (username || "").trim();
-    const p = password || "";
-    const record = AUTH_USERS[u];
-    if (!record || record.password !== p) return { ok: false, message: "Sai tài khoản hoặc mật khẩu." };
-
-    sessionStorage.setItem(AUTH_KEYS.user, u);
-    sessionStorage.setItem(AUTH_KEYS.role, record.role);
+function authSet(username, role) {
+    sessionStorage.setItem(AUTH_KEYS.user, username);
+    sessionStorage.setItem(AUTH_KEYS.role, role);
     sessionStorage.setItem(AUTH_KEYS.at, String(Date.now()));
-    return { ok: true, role: record.role, user: u };
+    return { ok: true, role: role, user: username };
 }
 
 function authLogout() {
