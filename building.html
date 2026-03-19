@@ -53,11 +53,15 @@
                     <button type="button" id="btnShowSetup" class="primary-btn"
                         style="width:auto; padding:8px 12px; font-size:0.85rem;">+ Thêm mới</button>
                 </div>
-                
+
                 <!-- Backup Actions -->
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:16px;">
-                    <button type="button" id="btnExportData" class="action-btn" style="background:#f1f5f9; color:#475569; font-size:0.8rem; padding:6px 10px; border:1px solid #cbd5e1; white-space:nowrap;">💾 Tải Sơ Đồ (Backup)</button>
-                    <label for="importDataFile" class="action-btn" style="background:#f1f5f9; color:#475569; font-size:0.8rem; padding:6px 10px; cursor:pointer; margin:0; border:1px solid #cbd5e1; white-space:nowrap;">📂 Phục Hồi (Restore)</label>
+                    <button type="button" id="btnExportData" class="action-btn"
+                        style="background:#f1f5f9; color:#475569; font-size:0.8rem; padding:6px 10px; border:1px solid #cbd5e1; white-space:nowrap;">💾
+                        Tải Sơ Đồ (Backup)</button>
+                    <label for="importDataFile" class="action-btn"
+                        style="background:#f1f5f9; color:#475569; font-size:0.8rem; padding:6px 10px; cursor:pointer; margin:0; border:1px solid #cbd5e1; white-space:nowrap;">📂
+                        Phục Hồi (Restore)</label>
                     <input type="file" id="importDataFile" accept=".json" style="display:none;">
                 </div>
                 <!-- Container for Multiple Buildings -->
@@ -116,21 +120,29 @@
                         <span class="legend-item"><span class="dot dot-green"></span>Hoàn thành</span>
                     </div>
                 </div>
-                
+
                 <!-- Ghi chú Đường mạng chính của Tòa nhà -->
-                <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin: 16px 0; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <label for="mainNetworkNotes" style="display: block; font-weight: 600; color: #9333ea; margin-bottom: 8px;">🌟 Ghi chú Luồng Tuyến Cáp Mạng Chính (Từ đâu đến đâu)</label>
-                    <textarea id="mainNetworkNotes" rows="2" placeholder="Ví dụ: Tầng 1 (Modem Viettel) -> Kéo lên Tầng 3 (Phòng Server) -> Chia ra Switch Tầng 4..."
+                <div
+                    style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin: 16px 0; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <label for="mainNetworkNotes"
+                        style="display: block; font-weight: 600; color: #9333ea; margin-bottom: 8px;">🌟 Ghi chú Luồng
+                        Tuyến Cáp Mạng Chính (Từ đâu đến đâu)</label>
+                    <textarea id="mainNetworkNotes" rows="2"
+                        placeholder="Ví dụ: Tầng 1 (Modem Viettel) -> Kéo lên Tầng 3 (Phòng Server) -> Chia ra Switch Tầng 4..."
                         style="width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; font-family: inherit; resize: vertical;"></textarea>
-                    
+
                     <!-- Building Photos Section -->
-                    <label style="display: block; font-weight: 600; color: #0284c7; margin: 16px 0 8px 0; border-top: 1px solid #f1f5f9; padding-top: 12px;">📸 Hình ảnh Tòa nhà (Toàn cảnh, Tủ Rack chính...)</label>
+                    <label
+                        style="display: block; font-weight: 600; color: #0284c7; margin: 16px 0 8px 0; border-top: 1px solid #f1f5f9; padding-top: 12px;">📸
+                        Hình ảnh Tòa nhà (Toàn cảnh, Tủ Rack chính...)</label>
                     <div class="image-upload-container">
                         <input type="file" id="buildingImageInput" accept="image/*" style="display: none;" multiple>
                         <div id="buildingImageGrid" class="image-grid-compact">
                             <!-- Placeholder -->
                             <div id="btnSelectBuildingImages" class="upload-placeholder">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                                     <polyline points="21 15 16 10 5 21"></polyline>
@@ -140,9 +152,13 @@
                         </div>
                     </div>
 
-                    <div style="text-align: right; margin-top: 12px; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-                        <span id="networkNoteSaveStatus" style="font-size: 0.85rem; color: #10b981; display: none; font-weight: 500;">✓ Đã lưu thành công</span>
-                        <button type="button" id="btnSaveNetworkNotes" onclick="saveNetworkNotes()" style="background: #9333ea; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.9rem;">
+                    <div
+                        style="text-align: right; margin-top: 12px; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <span id="networkNoteSaveStatus"
+                            style="font-size: 0.85rem; color: #10b981; display: none; font-weight: 500;">✓ Đã lưu thành
+                            công</span>
+                        <button type="button" id="btnSaveNetworkNotes" onclick="saveNetworkNotes()"
+                            style="background: #9333ea; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.9rem;">
                             💾 Lưu Ghi Chú & Ảnh
                         </button>
                     </div>
@@ -154,16 +170,22 @@
                 </div>
 
                 <!-- Bảng Thống kê Thiết bị Tòa nhà -->
-                <div id="buildingEquipmentSummary" style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin: 24px 0 16px 0; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: none;">
-                    <h3 style="margin-top: 0; margin-bottom: 12px; color: #0284c7; display: flex; align-items: center; gap: 8px;">
+                <div id="buildingEquipmentSummary"
+                    style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin: 24px 0 16px 0; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: none;">
+                    <h3
+                        style="margin-top: 0; margin-bottom: 12px; color: #0284c7; display: flex; align-items: center; gap: 8px;">
                         📊 Bảng Tổng hợp Thiết bị Tòa nhà
                     </h3>
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                                    <th style="padding: 10px; text-align: left; border-right: 1px solid #e2e8f0; width: 50%;">Tên Thiết bị</th>
-                                    <th style="padding: 10px; text-align: left; border-right: 1px solid #e2e8f0; width: 30%;">Model / Phân loại</th>
+                                    <th
+                                        style="padding: 10px; text-align: left; border-right: 1px solid #e2e8f0; width: 50%;">
+                                        Tên Thiết bị</th>
+                                    <th
+                                        style="padding: 10px; text-align: left; border-right: 1px solid #e2e8f0; width: 30%;">
+                                        Model / Phân loại</th>
                                     <th style="padding: 10px; text-align: center; width: 20%;">Tổng số lượng</th>
                                 </tr>
                             </thead>
@@ -222,7 +244,8 @@
                 <!-- Room Notes -->
                 <div class="input-group" style="margin-bottom: 16px;">
                     <label for="roomNotes" style="font-weight: 700; color: #475569;">📝 Ghi chú khu vực / phòng</label>
-                    <textarea id="roomNotes" rows="2" placeholder="Ví dụ: Phòng có tủ mạng, ổ cắm hỏng, camera góc trần..."
+                    <textarea id="roomNotes" rows="2"
+                        placeholder="Ví dụ: Phòng có tủ mạng, ổ cắm hỏng, camera góc trần..."
                         style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: inherit; resize: vertical; background: #f8fafc;"></textarea>
                     <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">
                         Ghi chú sẽ được lưu theo từng khu vực để xem lại ở trang chi tiết.
@@ -231,27 +254,39 @@
 
                 <!-- Left/Right Rooms Lists -->
                 <div class="input-group" style="margin-bottom: 16px;">
-                    <label for="roomRightList" style="font-weight: 600; color: #475569;">🏢 Danh sách phòng trực thuộc</label>
-                    <textarea id="roomRightList" rows="6" placeholder="VD: P. Họp&#10;Kho"
+                    <label for="roomRightList" style="font-weight: 600; color: #475569;">🏢 Danh sách phòng trực
+                        thuộc</label>
+                    <textarea id="roomRightList" rows="2" placeholder="VD: P. Họp&#10;Kho"
                         style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-family: inherit; resize: vertical; background: #f8fafc;"></textarea>
                 </div>
 
                 <!-- Auto-generate Rooms -->
-                <div id="quickCreateRoomsSection" style="display: none; margin-bottom: 16px; padding: 12px; border: 1px dashed #0284c7; border-radius: 8px; background: #f0f9ff;">
+                <div id="quickCreateRoomsSection"
+                    style="display: none; margin-bottom: 16px; padding: 12px; border: 1px dashed #0284c7; border-radius: 8px; background: #f0f9ff;">
                     <h4 style="margin-top: 0; color: #0284c7;">⚡ Tạo Nhanh Phòng (Cho Tầng Này)</h4>
-                    <p style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;">Nhập danh sách tên phòng (mỗi dòng 1 phòng) để tạo tự động vào sơ đồ trái/phải trên tầng này.</p>
-                    
-                    <div style="font-size: 0.85rem; color: #475569; margin-bottom: 4px; font-weight: 600;">Gợi ý (Click để đưa vào danh sách đang chọn):</div>
-                    <div id="quickRoomSuggestionsBox" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+                    <p style="font-size: 0.8rem; color: #475569; margin-bottom: 8px;">Nhập danh sách tên phòng (mỗi dòng
+                        1 phòng) để tạo tự động vào sơ đồ trái/phải trên tầng này.</p>
+
+                    <div style="font-size: 0.85rem; color: #475569; margin-bottom: 4px; font-weight: 600;">Gợi ý (Click
+                        để đưa vào danh sách đang chọn):</div>
+                    <div id="quickRoomSuggestionsBox"
+                        style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
                         <!-- JS populate -->
                     </div>
 
                     <div style="display: flex; gap: 8px;">
-                        <textarea id="quickLeftRooms" rows="4" placeholder="Nhập phòng bên Trái...&#10;Phòng 101&#10;Phòng 102" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
-                        <textarea id="quickRightRooms" rows="4" placeholder="Nhập phòng bên Phải...&#10;Kho&#10;Phòng Kế toán" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
+                        <textarea id="quickLeftRooms" rows="4"
+                            placeholder="Nhập phòng bên Trái...&#10;Phòng 101&#10;Phòng 102"
+                            style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
+                        <textarea id="quickRightRooms" rows="4"
+                            placeholder="Nhập phòng bên Phải...&#10;Kho&#10;Phòng Kế toán"
+                            style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.9rem;"></textarea>
                     </div>
-                    <button type="button" id="btnQuickCreateRooms" class="primary-btn" style="width: 100%; margin-top: 8px; padding: 8px; font-size: 0.9rem; font-weight: bold; background: #0284c7;">Tự động tạo phòng theo danh sách</button>
-                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 6px; text-align: center;">Thao tác này sẽ ngay lập tức sinh thêm các ô Phòng trên lưới.</p>
+                    <button type="button" id="btnQuickCreateRooms" class="primary-btn"
+                        style="width: 100%; margin-top: 8px; padding: 8px; font-size: 0.9rem; font-weight: bold; background: #0284c7;">Tự
+                        động tạo phòng theo danh sách</button>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 6px; text-align: center;">Thao tác này sẽ
+                        ngay lập tức sinh thêm các ô Phòng trên lưới.</p>
                 </div>
 
                 <!-- Equipments List -->
@@ -278,32 +313,10 @@
             <div class="modal-body">
                 <form id="equipmentForm">
                     <input type="hidden" id="eqId">
-                    <div class="input-group">
-                        <label>Tên thiết bị <span class="required">*</span></label>
-                        <input type="text" id="eqName" required list="eqNameSuggestions"
-                            placeholder="VD: Router Cisco, Switch PoE, Máy tính để bàn">
-                        <datalist id="eqNameSuggestions">
-                            <option value="Máy tính để bàn (PC)">
-                            <option value="Máy tính xách tay (Laptop)">
-                            <option value="Máy in">
-                            <option value="Router">
-                            <option value="Switch PoE">
-                            <option value="Camera">
-                            <option value="Access Point (Wifi)">
-                        </datalist>
-                    </div>
-                    <div class="input-group">
-                        <label>Model / Phân loại (Nếu có)</label>
-                        <input type="text" id="eqModel" list="eqModelSuggestions"
-                            placeholder="VD: FPT Wifi, Cisco, HP, Dell">
-                        <datalist id="eqModelSuggestions">
-                            <!-- Sẽ được populate tự động bằng JS từ lịch sử -->
-                        </datalist>
-                    </div>
                     <div class="input-group"
                         style="border-left: 3px solid #0284c7; padding-left: 8px; margin-top: 12px; background: rgba(2, 132, 199, 0.05); padding: 8px; border-radius: 4px;">
                         <label style="color: #0284c7; font-weight: 600;">🌐 Đường truyền Internet (ISP) - Nếu có</label>
-                        <input type="text" id="eqISP" list="eqISPSuggestions"
+                        <input type="text" id="eqISP" list="eqISPSuggestions" autocomplete="off"
                             placeholder="VD: VNPT, Viettel, FPT Telecom...">
                         <datalist id="eqISPSuggestions">
                             <option value="VNPT">
@@ -313,36 +326,64 @@
                         </datalist>
                     </div>
                     <div class="input-group">
+                        <label>Tên thiết bị <span class="required">*</span></label>
+                        <input type="text" id="eqName" required list="eqNameSuggestions" autocomplete="off"
+                            placeholder="VD: Router Cisco, Switch PoE, Máy tính để bàn">
+                        <datalist id="eqNameSuggestions">
+
+                        </datalist>
+                    </div>
+                    <div class="input-group">
                         <label>Mục đích sử dụng</label>
-                        <div class="radio-group" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div class="radio-group"
+                            style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                            <label
+                                style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" name="eqPurposeRadio" value="Wifi"> Wifi
                             </label>
-                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <label
+                                style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" name="eqPurposeRadio" value="Switch chia mạng"> Switch chia mạng
                             </label>
-                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <label
+                                style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" name="eqPurposeRadio" value="Cân bằng tải"> Cân bằng tải
                             </label>
-                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="eqPurposeRadio" value="Switch chia mạng và wifi"> Switch chia mạng và wifi
+                            <label
+                                style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="eqPurposeRadio" value="Switch chia mạng và wifi"> Switch chia
+                                mạng và wifi
                             </label>
-                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <label
+                                style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" name="eqPurposeRadio" value="Chạy camera"> Chạy camera
                             </label>
-                            <label style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <label
+                                style="font-weight: normal; margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="radio" name="eqPurposeRadio" value="Khác"> Khác
                             </label>
                         </div>
-                        <input type="text" id="eqPurposeOther" placeholder="Nhập mục đích khác..." style="margin-top: 8px; display: none;">
+                        <input type="text" id="eqPurposeOther" placeholder="Nhập mục đích khác..." autocomplete="off"
+                            style="margin-top: 8px; display: none;">
                     </div>
-                    <div class="input-group" style="background: rgba(147, 51, 234, 0.05); border-left: 3px solid #9333ea; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 8px;">
+                    <div class="input-group">
+                        <label>Model / Phân loại (Nếu có)</label>
+                        <input type="text" id="eqModel" list="eqModelSuggestions" autocomplete="off"
+                            placeholder="VD: FPT Wifi, Cisco, HP, Dell">
+                        <datalist id="eqModelSuggestions">
+                            <!-- Sẽ được populate tự động bằng JS từ lịch sử -->
+                        </datalist>
+                    </div>
+                    <div class="input-group"
+                        style="background: rgba(147, 51, 234, 0.05); border-left: 3px solid #9333ea; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="eqIsMainDevice" style="width: 20px; height: 20px; cursor: pointer;">
-                        <label for="eqIsMainDevice" style="color: #9333ea; font-weight: 600; margin-bottom: 0; cursor: pointer;">🌟 Đánh dấu là Thiết bị mạng chính</label>
+                        <label for="eqIsMainDevice"
+                            style="color: #9333ea; font-weight: 600; margin-bottom: 0; cursor: pointer;">🌟 Đánh dấu là
+                            Thiết bị mạng chính</label>
                     </div>
                     <div class="input-group">
                         <label>Vị trí chi tiết trên thực tế</label>
-                        <input type="text" id="eqExactLocation" list="eqLocationSuggestions"
+                        <input type="text" id="eqExactLocation" list="eqLocationSuggestions" autocomplete="off"
                             placeholder="VD: Chân bàn, Tủ mạng">
                         <datalist id="eqLocationSuggestions">
                             <option value="Trên bàn làm việc">
@@ -392,7 +433,13 @@
             </div>
         </div>
     </div>
+
+    <!-- Image Lightbox -->
+    <div id="imageLightbox" class="image-lightbox" onclick="closeImageLightbox()">
+        <span class="close-lightbox" onclick="closeImageLightbox()">&times;</span>
+        <img id="lightboxImage" src="" alt="Zoomed Image" onclick="event.stopPropagation()">
     </div>
+
     <script src="building.js?v=20260317_3"></script>
     <script>
         if ('serviceWorker' in navigator) {

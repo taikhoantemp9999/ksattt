@@ -100,6 +100,34 @@ suggestionsRef.on('value', (snapshot) => {
     }
 });
 
+// ===== GLOBAL EQUIPMENT DICTIONARY =====
+let globalEquipmentsDictionary = [];
+surveysRef.once('value', snapshot => {
+    if (snapshot.exists()) {
+        const allCustomers = snapshot.val();
+        Object.values(allCustomers).forEach(customerData => {
+            const bArr = customerData.buildingsArray;
+            if (bArr) {
+                const bList = Array.isArray(bArr) ? bArr : Object.values(bArr);
+                bList.forEach(b => {
+                    if (b.equipments) {
+                        const eqList = Array.isArray(b.equipments) ? b.equipments : Object.values(b.equipments);
+                        eqList.forEach(eq => {
+                            if (eq.model && eq.model.trim()) {
+                                globalEquipmentsDictionary.push({
+                                    name: (eq.name || '').toLowerCase(),
+                                    purpose: (eq.purpose || '').toLowerCase(),
+                                    model: eq.model.trim()
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+});
+
 // ===== LOGIC OFFLINE =====
 let pendingSyncCustomerIds = new Set(JSON.parse(localStorage.getItem('PENDING_BUILDING_SYNC') || '[]'));
 let pendingSuggestions = JSON.parse(localStorage.getItem('PENDING_SUGGESTIONS') || '[]');
@@ -206,7 +234,7 @@ document.getElementById("btnGenerateMap").addEventListener("click", () => {
     const template = document.getElementById("buildingTemplate").value;
 
     document.getElementById("displayBuildingName").innerText = name;
-    
+
     // Gán trống giá trị UI
     mainNetworkNotes.value = '';
 
@@ -474,7 +502,7 @@ window.editBuilding = function (id) {
 };
 
 // Xử lý Ghi chú Đường Truyền Mạng Chính (Save thủ công qua nút)
-window.saveNetworkNotes = function() {
+window.saveNetworkNotes = function () {
     buildingData.mainNetworkNotes = mainNetworkNotes.value.trim();
     const index = buildingsArray.findIndex(b => b.id === buildingData.id);
     if (index !== -1) {
@@ -531,16 +559,16 @@ function renderQuickRoomChips() {
     const container = document.getElementById('quickRoomSuggestionsBox');
     if (!container) return;
     container.innerHTML = '';
-    
+
     userSuggestions.rooms.forEach(room => {
         const chip = document.createElement('span');
         chip.style.cssText = 'background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px; cursor: pointer; user-select: none; transition: 0.2s;';
         chip.innerText = '+ ' + room;
         chip.title = "Thêm vào danh sách";
-        
+
         chip.onmouseover = () => chip.style.background = '#bae6fd';
         chip.onmouseout = () => chip.style.background = '#e0f2fe';
-        
+
         chip.addEventListener('click', () => {
             const targetArea = document.getElementById(lastFocusedQuickTextArea);
             if (!targetArea) return;
@@ -552,7 +580,7 @@ function renderQuickRoomChips() {
             }
             targetArea.focus();
         });
-        
+
         container.appendChild(chip);
     });
 }
@@ -574,7 +602,7 @@ function saveSuggestion(category, value) {
 // Hàm Render Ma trận lưới Phòng
 function renderMap() {
     floorsContainer.innerHTML = '';
-    
+
     // Đổ dữ liệu Ghi chú Đường mạng chính ra UI
     if (mainNetworkNotes) {
         mainNetworkNotes.value = buildingData.mainNetworkNotes || '';
@@ -629,7 +657,7 @@ function renderMap() {
             let extraClass = '';
             if (node.type === 'Corridor') extraClass = 'corridor-node';
             if (node.type === 'Staircase') extraClass = 'staircase-node';
-            
+
             if (hasIsp) extraClass += ' has-isp-room';
 
             card.className = `room-card ${extraClass} status-${node.status}`;
@@ -644,18 +672,18 @@ function renderMap() {
             const rightText = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `\n🏢 DS Phòng: ${String(node.rightRooms).replace(/\n/g, ', ')}` : '';
             const tooltip = `${node.name || ''}${noteText}${rightText}`.trim();
             card.title = tooltip;
-            
+
             let noteHtml = '';
             const noteContent = (node.notes && String(node.notes).trim() !== '') ? `<div style="margin-bottom: 2px;">📝 ${String(node.notes).trim().replace(/\n/g, '<br>')}</div>` : '';
             const rightRoomsContent = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `<div>🏢 ${String(node.rightRooms).trim().replace(/\n/g, '<br>')}</div>` : '';
-            
+
             if (noteContent || rightRoomsContent) {
                 noteHtml = `<div style="font-size: 0.75rem; color: #64748b; margin-top: 8px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px; line-height: 1.3; word-break: break-word; text-align: left; width: 100%;">
                     ${noteContent}
                     ${rightRoomsContent}
                 </div>`;
             }
-            
+
             card.innerHTML = `<div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${node.name}</div><div class="room-eq-count" style="margin-bottom: 4px;">💻 ${eqCount}</div>${noteHtml}`;
             card.addEventListener('click', () => openRoomDrawer(node.id));
 
@@ -682,7 +710,7 @@ function renderMap() {
 function renderEquipmentSummary() {
     const summaryDiv = document.getElementById("buildingEquipmentSummary");
     const tbody = document.getElementById("summaryTableBody");
-    
+
     if (!summaryDiv || !tbody) return;
 
     if (!buildingData.equipments || buildingData.equipments.length === 0) {
@@ -706,15 +734,15 @@ function renderEquipmentSummary() {
     });
 
     tbody.innerHTML = '';
-    
+
     // Sort array cho đẹp theo Alphabet
     const sortedKeys = Object.keys(groupedData).sort();
-    
+
     sortedKeys.forEach(key => {
         const item = groupedData[key];
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #e2e8f0';
-        
+
         tr.innerHTML = `
             <td style="padding: 10px; border-right: 1px solid #e2e8f0; font-weight: 500; color: #334155;">${item.name}</td>
             <td style="padding: 10px; border-right: 1px solid #e2e8f0; color: #475569;">${item.model}</td>
@@ -735,7 +763,7 @@ function openRoomDrawer(nodeId) {
     drawerRoomNameInput.value = node.name;
     roomCompletedToggle.checked = node.status === 2; // Xanh là checked
     if (roomNotes) roomNotes.value = node.notes || '';
-    
+
     const roomRightList = document.getElementById('roomRightList');
     if (roomRightList) roomRightList.value = node.rightRooms || '';
 
@@ -760,16 +788,16 @@ if (btnQuickCreateRooms) {
     btnQuickCreateRooms.addEventListener("click", () => {
         const leftText = document.getElementById("quickLeftRooms").value.trim();
         const rightText = document.getElementById("quickRightRooms").value.trim();
-        
+
         if (!leftText && !rightText) {
             showToast("Vui lòng nhập danh sách phòng cần tạo!", "error");
             return;
         }
-        
+
         const node = buildingData.nodes.find(n => n.id === currentSelectedNodeId);
         if (!node) return;
         const floorNum = node.floor;
-        
+
         if (!confirm(`Xác nhận: Việc này sẽ XÓA TOÀN BỘ CÁC PHÒNG (và thiết bị bên trong phòng) thuộc Tầng ${floorNum} để tạo mới danh sách. Bạn có chắc chắn?`)) {
             return;
         }
@@ -777,14 +805,14 @@ if (btnQuickCreateRooms) {
         const roomsToDeleteIds = buildingData.nodes.filter(n => n.floor === floorNum && n.type === 'Room').map(n => n.id);
         buildingData.nodes = buildingData.nodes.filter(n => !(n.floor === floorNum && n.type === 'Room'));
         buildingData.equipments = buildingData.equipments.filter(eq => !roomsToDeleteIds.includes(eq.nodeId));
-        
+
         let createdCount = 0;
         let maxNodeId = 0;
         buildingData.nodes.forEach(n => {
             const idNum = parseInt(n.id.replace('node_', ''));
             if (!isNaN(idNum) && idNum > maxNodeId) maxNodeId = idNum;
         });
-        
+
         const parseAndCreate = (text, position) => {
             if (!text) return;
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
@@ -793,10 +821,10 @@ if (btnQuickCreateRooms) {
                 createdCount++;
             });
         };
-        
+
         parseAndCreate(leftText, 'left');
         parseAndCreate(rightText, 'right');
-        
+
         if (createdCount >= 0) {
             document.getElementById("quickLeftRooms").value = '';
             document.getElementById("quickRightRooms").value = '';
@@ -900,7 +928,7 @@ function renderEquipmentsInDrawer(nodeId) {
         const isMainHtml = eq.isMainDevice ? `<div class="eq-item-detail" style="color:#9333ea; font-weight:600; background:rgba(147,51,234,0.1); display:inline-block; padding:2px 6px; border-radius:4px; margin-right:4px;">🌟 Mạch chính</div>` : '';
         const ispHtml = eq.isp ? `<div class="eq-item-detail" style="color:#0284c7; font-weight:600; background:rgba(2,132,199,0.1); display:inline-block; padding:2px 6px; border-radius:4px;">🌐 ISP: ${eq.isp}</div>` : '';
         const combinedTags = (isMainHtml || ispHtml) ? `<div style="margin-top:4px;">${isMainHtml}${ispHtml}</div>` : '';
-        
+
         const div = document.createElement('div');
         div.className = 'eq-item' + (eq.isp ? ' has-isp' : '') + (eq.isMainDevice ? ' has-main-device' : '');
         div.innerHTML = `
@@ -908,6 +936,7 @@ function renderEquipmentsInDrawer(nodeId) {
             <div class="eq-item-detail">📍 ${eq.exactLocation || 'Không ghi rõ vị trí'}</div>
             ${combinedTags}
             <div class="eq-item-detail">🎯 ${eq.purpose || 'Không rõ mục đích'}</div>
+            <button class="eq-item-delete" onclick="duplicateEquipment('${eq.id}')" style="right: 68px; background:#f0fdf4; color:#16a34a;" title="Nhân bản thiết bị">⎘</button>
             <button class="eq-item-delete" onclick="openEquipmentForEdit('${eq.id}')" style="right: 34px; background:#e0f2fe; color:#0284c7;" title="Sửa thiết bị">✎</button>
             <button class="eq-item-delete" onclick="deleteEquipment('${eq.id}')">&times;</button>
         `;
@@ -939,12 +968,13 @@ btnAddEquipment.addEventListener('click', () => {
     document.getElementById("eqId").value = '';
     document.getElementById('eqISP').value = ''; // Reset ISP field
     document.getElementById('eqIsMainDevice').checked = false; // Reset Main Device check
-    
+
     document.querySelectorAll('input[name="eqPurposeRadio"]').forEach(r => r.checked = false);
     document.getElementById('eqPurposeOther').value = '';
     document.getElementById('eqPurposeOther').style.display = 'none';
 
     document.getElementById('eqModalTitle').innerText = 'Thêm Thiết bị';
+    updateModelSuggestions();
     equipmentModal.classList.add('active');
 });
 
@@ -956,7 +986,7 @@ equipmentForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
     const eqIdVal = document.getElementById('eqId').value;
-    
+
     let selectedPurpose = '';
     const checkedRadio = document.querySelector('input[name="eqPurposeRadio"]:checked');
     if (checkedRadio) {
@@ -969,9 +999,9 @@ equipmentForm.addEventListener('submit', (e) => {
     const payload = {
         id: eqIdVal || ('eq_' + Date.now()),
         nodeId: currentSelectedNodeId,
-        name: document.getElementById('eqName').value,
-        model: document.getElementById('eqModel').value,
-        exactLocation: document.getElementById('eqExactLocation').value,
+        name: document.getElementById('eqName').value.trim(),
+        model: document.getElementById('eqModel').value.trim().toUpperCase(),
+        exactLocation: document.getElementById('eqExactLocation').value.trim(),
         isp: document.getElementById('eqISP').value,
         isMainDevice: document.getElementById('eqIsMainDevice').checked,
         purpose: selectedPurpose,
@@ -1037,7 +1067,7 @@ window.openEquipmentForEdit = function (eqId) {
             r.checked = false;
         }
     });
-    
+
     if (purpose && !matched) {
         document.querySelector('input[name="eqPurposeRadio"][value="Khác"]').checked = true;
         document.getElementById("eqPurposeOther").value = purpose;
@@ -1048,7 +1078,25 @@ window.openEquipmentForEdit = function (eqId) {
     }
 
     document.getElementById('eqModalTitle').innerText = 'Sửa Thiết bị';
+    updateModelSuggestions();
     equipmentModal.classList.add('active');
+};
+
+// Nhân bản thiết bị
+window.duplicateEquipment = function (eqId) {
+    const originalEq = buildingData.equipments.find(e => e.id === eqId);
+    if (!originalEq) return;
+
+    if (confirm(`Bạn muốn nhân bản thiết bị "${originalEq.name}" trong phòng này?`)) {
+        const newEq = { ...originalEq };
+        newEq.id = 'eq_' + Date.now() + Math.floor(Math.random() * 1000);
+
+        buildingData.equipments.push(newEq);
+        renderEquipmentsInDrawer(currentSelectedNodeId);
+        renderMap();
+        saveBuildingDataLocally();
+        showToast("Đã nhân bản thiết bị!");
+    }
 };
 
 // Xóa thiết bị (Gắn ở inline window context)
@@ -1215,22 +1263,22 @@ window.deleteRoomFromDirectory = function (index) {
 
 // Tính năng Export (Backup)
 document.getElementById('btnExportData').addEventListener('click', () => {
-    if(buildingsArray.length === 0) {
+    if (buildingsArray.length === 0) {
         showToast("Không có dữ liệu tòa nhà để tải!");
         return;
     }
     const dataStr = JSON.stringify(buildingsArray, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    
+
     let safeName = customerName.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'backup';
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `backup_${safeName}_sodo.json`;
     document.body.appendChild(a);
     a.click();
-    
+
     setTimeout(() => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
@@ -1247,9 +1295,9 @@ document.getElementById('importDataFile').addEventListener('change', (e) => {
     reader.onload = (event) => {
         try {
             const importedData = JSON.parse(event.target.result);
-            if(Array.isArray(importedData)) {
-                if(buildingsArray.length > 0) {
-                    if(!confirm("Dữ liệu hiện tại sẽ bị xóa và GHÌ ĐÈ bởi tệp bạn vừa up. Bạn có chắc chắn?")) {
+            if (Array.isArray(importedData)) {
+                if (buildingsArray.length > 0) {
+                    if (!confirm("Dữ liệu hiện tại sẽ bị xóa và GHÌ ĐÈ bởi tệp bạn vừa up. Bạn có chắc chắn?")) {
                         e.target.value = ''; // Reset
                         return;
                     }
@@ -1297,7 +1345,7 @@ function uploadBuildingImageToDrive(file) {
     // Tên file: [BuildingName]_[Timestamp]_[FileName]
     const bName = buildingData.name || 'Building';
     const cleanBName = bName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
-    
+
     const now = new Date();
     const ts = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + "_" + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
     const newName = `${cleanBName}_${ts}_${file.name}`;
@@ -1305,7 +1353,7 @@ function uploadBuildingImageToDrive(file) {
     const tempId = 'bimg_' + Date.now() + Math.random().toString(36).substr(2, 5);
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const base64 = e.target.result;
         appendBuildingImageToGrid({
             id: tempId,
@@ -1322,24 +1370,24 @@ function uploadBuildingImageToDrive(file) {
                 mimeType: file.type
             })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const newImg = { url: data.url, caption: '' };
-                if (!buildingData.photos) buildingData.photos = [];
-                buildingData.photos.push(newImg);
-                updateBuildingImageInGrid(tempId, data);
-                saveBuildingDataLocally();
-            } else {
-                throw new Error(data.error || 'Upload failed');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            const item = document.getElementById(tempId);
-            if (item) item.remove();
-            showToast("Lỗi tải ảnh: " + err.message, "error");
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const newImg = { url: data.url, caption: '' };
+                    if (!buildingData.photos) buildingData.photos = [];
+                    buildingData.photos.push(newImg);
+                    updateBuildingImageInGrid(tempId, data);
+                    saveBuildingDataLocally();
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                const item = document.getElementById(tempId);
+                if (item) item.remove();
+                showToast("Lỗi tải ảnh: " + err.message, "error");
+            });
     };
     reader.readAsDataURL(file);
 }
@@ -1348,7 +1396,7 @@ function appendBuildingImageToGrid(imgData) {
     const item = document.createElement('div');
     item.className = 'image-item';
     item.id = imgData.id;
-    
+
     let displayUrl = imgData.url || imgData.urlBase64;
     // Fix Google Drive Link
     if (displayUrl && displayUrl.includes('drive.google.com')) {
@@ -1358,39 +1406,39 @@ function appendBuildingImageToGrid(imgData) {
 
     item.innerHTML = `
         <div class="image-preview-wrapper">
-            <img src="${displayUrl}" class="img-preview" alt="Building Photo">
+            <img src="${displayUrl}" class="img-preview" alt="Building Photo" onclick="openImageLightbox('${displayUrl}')">
             ${imgData.uploading ? '<div class="uploading-overlay" style="position:absolute; inset:0; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:#0284c7;">Đang tải...</div>' : ''}
             <button class="btn-remove-image" onclick="deleteBuildingImageLocally('${imgData.id}', '${imgData.url || ''}')">&times;</button>
         </div>
         <textarea class="image-description" placeholder="Mô tả ảnh..." onchange="updateBuildingImageCaption('${imgData.url || ''}', this.value)">${imgData.caption || ''}</textarea>
     `;
-    
+
     buildingImageGrid.insertBefore(item, btnSelectBuildingImages);
 }
 
 function updateBuildingImageInGrid(tempId, realData) {
     const item = document.getElementById(tempId);
     if (!item) return;
-    
+
     const img = item.querySelector('img');
     const overlay = item.querySelector('.uploading-overlay');
     const btnDel = item.querySelector('.btn-remove-image');
     const textarea = item.querySelector('.image-description');
-    
+
     let dUrl = realData.url;
     if (dUrl.includes('drive.google.com')) {
         const idM = dUrl.match(/[-\w]{25,}/);
         if (idM) dUrl = `https://lh3.googleusercontent.com/d/${idM[0]}`;
     }
-    
+
     if (img) img.src = dUrl;
     if (overlay) overlay.remove();
-    
+
     if (btnDel) btnDel.setAttribute('onclick', `deleteBuildingImageLocally('${tempId}', '${dUrl}')`);
     if (textarea) textarea.setAttribute('onchange', `updateBuildingImageCaption('${dUrl}', this.value)`);
 }
 
-window.updateBuildingImageCaption = function(url, caption) {
+window.updateBuildingImageCaption = function (url, caption) {
     if (!buildingData.photos) return;
     const img = buildingData.photos.find(i => i.url === url);
     if (img) {
@@ -1399,7 +1447,7 @@ window.updateBuildingImageCaption = function(url, caption) {
     }
 };
 
-window.deleteBuildingImageLocally = function(uiId, url) {
+window.deleteBuildingImageLocally = function (uiId, url) {
     if (confirm("Xóa ảnh này?")) {
         const item = document.getElementById(uiId);
         if (item) item.remove();
@@ -1414,7 +1462,7 @@ function renderBuildingImages() {
     // Clear old items
     const items = buildingImageGrid.querySelectorAll('.image-item');
     items.forEach(it => it.remove());
-    
+
     if (buildingData.photos) {
         buildingData.photos.forEach((img, idx) => {
             appendBuildingImageToGrid({
@@ -1425,3 +1473,118 @@ function renderBuildingImages() {
         });
     }
 }
+
+// Image Lightbox zoom functionality
+window.openImageLightbox = function (url) {
+    const lb = document.getElementById('imageLightbox');
+    const img = document.getElementById('lightboxImage');
+    if (lb && img) {
+        img.src = url;
+        lb.classList.add('active');
+    }
+}
+window.closeImageLightbox = function () {
+    const lb = document.getElementById('imageLightbox');
+    if (lb) lb.classList.remove('active');
+}
+
+// Dynamic Model Suggestions
+function updateModelSuggestions() {
+    const nameEl = document.getElementById('eqName');
+    if (!nameEl) return;
+    const currentName = nameEl.value.trim().toLowerCase();
+
+    let currentPurpose = '';
+    const checkedRadio = document.querySelector('input[name="eqPurposeRadio"]:checked');
+    if (checkedRadio) {
+        currentPurpose = checkedRadio.value;
+        if (currentPurpose === 'Khác') {
+            const otherEl = document.getElementById('eqPurposeOther');
+            if (otherEl) currentPurpose = otherEl.value.trim();
+        }
+    }
+    currentPurpose = currentPurpose.toLowerCase();
+
+    const dlist = document.getElementById('eqModelSuggestions');
+    if (!dlist) return;
+    dlist.innerHTML = '';
+
+    let suggestedModels = new Set();
+
+    // Quét qua toàn bộ từ điển thiết bị trên Cloud để gợi ý chéo
+    globalEquipmentsDictionary.forEach(eq => {
+        let match = true;
+        if (currentName) {
+            const eqName = eq.name;
+            if (!eqName.includes(currentName) && !currentName.includes(eqName) && eqName !== currentName) {
+                match = false;
+            }
+        }
+
+        if (currentPurpose && eq.purpose !== currentPurpose) {
+            match = false;
+        }
+
+        if (match) {
+            suggestedModels.add(eq.model);
+        }
+    });
+
+    // Quét thêm dữ liệu local phòng khi có bản ghi mới nạp chưa push
+    if (typeof buildingsArray !== 'undefined') {
+        buildingsArray.forEach(bldg => {
+            if (bldg.equipments) {
+                const eqs = Array.isArray(bldg.equipments) ? bldg.equipments : Object.values(bldg.equipments);
+                eqs.forEach(eq => {
+                    const eqName = (eq.name || '').toLowerCase();
+                    const eqPurpose = (eq.purpose || '').toLowerCase();
+                    const eqModel = (eq.model || '').trim();
+                    if (eqModel !== '') {
+                        let match = true;
+                        if (currentName && !eqName.includes(currentName) && !currentName.includes(eqName) && eqName !== currentName) match = false;
+                        if (currentPurpose && eqPurpose !== currentPurpose) match = false;
+                        if (match) suggestedModels.add(eqModel);
+                    }
+                });
+            }
+        });
+    }
+
+    // Nếu rỗng và user không lọc gì, hiện nguyên list
+    if (suggestedModels.size === 0 && !currentName && !currentPurpose && userSuggestions && userSuggestions.eqModels) {
+        userSuggestions.eqModels.forEach(m => suggestedModels.add(m));
+    }
+
+    suggestedModels.forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        dlist.appendChild(opt);
+    });
+}
+
+// Bind events for auto suggestion
+document.addEventListener('DOMContentLoaded', () => {
+    const eqNameInput = document.getElementById('eqName');
+    if (eqNameInput) eqNameInput.addEventListener('input', updateModelSuggestions);
+
+    document.querySelectorAll('input[name="eqPurposeRadio"]').forEach(r => {
+        r.addEventListener('change', updateModelSuggestions);
+    });
+
+    const eqPurposeOtherInput = document.getElementById('eqPurposeOther');
+    if (eqPurposeOtherInput) eqPurposeOtherInput.addEventListener('input', updateModelSuggestions);
+
+    // Tự động in hoa Model thiết bị khi gõ
+    const eqModelInput = document.getElementById('eqModel');
+    if (eqModelInput) {
+        eqModelInput.addEventListener('input', function () {
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.toUpperCase();
+            // Preserve cursor position if possible
+            if (this.setSelectionRange) {
+                this.setSelectionRange(start, end);
+            }
+        });
+    }
+});

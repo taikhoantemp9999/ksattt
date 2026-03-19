@@ -91,6 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHtttCheckboxes(false); // Sửa lại thành false để KHÔNG tự động tick khi F5 màn hình trắng
     // updateCountBadge() sẽ được gọi tự động khi Firebase trả data về
 
+    renderDeXuatSuggestions();
+
     const form = document.getElementById('surveyForm');
     form.addEventListener('submit', handleFormSubmit);
 
@@ -174,7 +176,7 @@ function handleImageSelection(e) {
     files.forEach(file => {
         uploadImageToDrive(file);
     });
-    
+
     // Reset input để có thể chọn lại cùng file nếu muốn
     e.target.value = '';
 }
@@ -183,24 +185,24 @@ function uploadImageToDrive(file) {
     // Lấy tên đơn vị để đặt tên file
     const unitName = document.getElementsByName('don_vi_khao_sat')[0]?.value || 'KhaoSat';
     const cleanName = unitName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
-    
+
     const now = new Date();
-    const timestamp = now.getFullYear() + 
-                      String(now.getMonth() + 1).padStart(2, '0') + 
-                      String(now.getDate()).padStart(2, '0') + "_" + 
-                      String(now.getHours()).padStart(2, '0') + 
-                      String(now.getMinutes()).padStart(2, '0') + 
-                      String(now.getSeconds()).padStart(2, '0');
-    
+    const timestamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + "_" +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+
     const newFileName = `${cleanName}_${timestamp}_${file.name}`;
 
     // Tạo preview tạm thời với trạng thái đang upload
     const tempId = 'img_' + Date.now() + Math.random().toString(36).substr(2, 5);
     const reader = new FileReader();
 
-    reader.onload = function(event) {
+    reader.onload = function (event) {
         const base64 = event.target.result;
-        
+
         // Thêm vào UI trạng thái chờ
         appendImageToGrid({
             id: tempId,
@@ -218,30 +220,30 @@ function uploadImageToDrive(file) {
                 mimeType: file.type
             })
         })
-        .then(response => {
-            // Apps Script hay redirect (302), fetch sẽ tự follow.
-            // Nếu chết ở đây với lỗi CORS, khả năng cao là do Apps Script chưa 'Deploy' đúng 'Anyone'.
-            return response.json();
-        })
-        .then(result => {
-            if (result.success) {
-                // Cập nhật mảng dữ liệu thật
-                const newImg = { url: result.url, previewUrl: result.previewUrl, caption: '' };
-                uploadedImages.push(newImg);
-                
-                // Cập nhật UI: Bỏ trạng thái uploading, gán URL thật
-                updateImageInGrid(tempId, newImg);
-                showToast("Đã tải lên ảnh thành công!");
-            } else {
+            .then(response => {
+                // Apps Script hay redirect (302), fetch sẽ tự follow.
+                // Nếu chết ở đây với lỗi CORS, khả năng cao là do Apps Script chưa 'Deploy' đúng 'Anyone'.
+                return response.json();
+            })
+            .then(result => {
+                if (result.success) {
+                    // Cập nhật mảng dữ liệu thật
+                    const newImg = { url: result.url, previewUrl: result.previewUrl, caption: '' };
+                    uploadedImages.push(newImg);
+
+                    // Cập nhật UI: Bỏ trạng thái uploading, gán URL thật
+                    updateImageInGrid(tempId, newImg);
+                    showToast("Đã tải lên ảnh thành công!");
+                } else {
+                    removeImageFromGrid(tempId);
+                    showToast("Lỗi tải ảnh: " + result.error, "error");
+                }
+            })
+            .catch(err => {
                 removeImageFromGrid(tempId);
-                showToast("Lỗi tải ảnh: " + result.error, "error");
-            }
-        })
-        .catch(err => {
-            removeImageFromGrid(tempId);
-            showToast("Lỗi kết nối khi tải ảnh!", "error");
-            console.error(err);
-        });
+                showToast("Lỗi kết nối khi tải ảnh!", "error");
+                console.error(err);
+            });
     };
     reader.readAsDataURL(file);
 }
@@ -249,11 +251,11 @@ function uploadImageToDrive(file) {
 function appendImageToGrid(imgData) {
     const grid = document.getElementById('imageGrid');
     const btnAdd = document.getElementById('btnSelectImages');
-    
+
     const item = document.createElement('div');
     item.className = 'image-item';
     item.id = imgData.id || '';
-    
+
     item.innerHTML = `
         <div class="image-preview-wrapper text-center">
             <img src="${imgData.url || imgData.urlBase64}" alt="Preview">
@@ -262,19 +264,19 @@ function appendImageToGrid(imgData) {
         </div>
         <textarea class="image-description" placeholder="Mô tả ảnh..." onchange="updateImageCaption('${imgData.url || ''}', this.value)">${imgData.caption || ''}</textarea>
     `;
-    
+
     grid.insertBefore(item, btnAdd);
 }
 
 function updateImageInGrid(tempId, realData) {
     const item = document.getElementById(tempId);
     if (!item) return;
-    
+
     const img = item.querySelector('img');
     const overlay = item.querySelector('.uploading-overlay');
     const btnDel = item.querySelector('.btn-remove-image');
     const textarea = item.querySelector('.image-description');
-    
+
     // Xử lý link Google Drive để hiển thị được trực tiếp
     let displayUrl = realData.url;
     if (displayUrl.includes('drive.google.com')) {
@@ -284,10 +286,10 @@ function updateImageInGrid(tempId, realData) {
             displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
         }
     }
-    
+
     if (img) img.src = displayUrl;
     if (overlay) overlay.remove();
-    
+
     // Cập nhật tham số cho các hàm xử lý
     const finalUrl = displayUrl;
     if (btnDel) {
@@ -296,7 +298,7 @@ function updateImageInGrid(tempId, realData) {
     if (textarea) {
         textarea.setAttribute('onchange', `updateImageCaption('${finalUrl}', this.value)`);
     }
-    
+
     // Cật nhật lại URL trong mảng dữ liệu
     const imgInArray = uploadedImages.find(i => i.url === realData.url);
     if (imgInArray) {
@@ -309,17 +311,17 @@ function removeImageFromGrid(id) {
     if (item) item.remove();
 }
 
-window.updateImageCaption = function(url, caption) {
+window.updateImageCaption = function (url, caption) {
     const img = uploadedImages.find(i => i.url === url);
     if (img) img.caption = caption;
 }
 
-window.deleteImageLocally = function(uiId, url) {
+window.deleteImageLocally = function (uiId, url) {
     if (!confirm("Xóa ảnh này khỏi phiếu khảo sát?")) return;
-    
+
     // Xóa khỏi mảng dữ liệu
     uploadedImages = uploadedImages.filter(i => i.url !== url);
-    
+
     // Xóa khỏi UI
     const item = document.getElementById(uiId);
     if (item) item.remove();
@@ -329,14 +331,14 @@ function renderUploadedImages() {
     // Chỉ dùng khi Load từ Firebase về
     const grid = document.getElementById('imageGrid');
     const btnAdd = document.getElementById('btnSelectImages');
-    
+
     // Giữ lại nút thêm
     const items = grid.querySelectorAll('.image-item');
     items.forEach(it => it.remove());
-    
+
     uploadedImages.forEach((img, index) => {
         const id = 'img_loaded_' + index;
-        
+
         let displayUrl = img.url;
         if (displayUrl.includes('drive.google.com')) {
             const fileIdMatch = displayUrl.match(/[-\w]{25,}/);
@@ -344,7 +346,7 @@ function renderUploadedImages() {
                 displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
             }
         }
-        
+
         appendImageToGrid({
             id: id,
             url: displayUrl,
@@ -505,7 +507,7 @@ function renderHtttCheckboxes(forceCheckAll = false, newlyAddedItem = null) {
 
         label.appendChild(input);
         label.appendChild(span);
-        
+
         // Highlight đỏ nếu không phải hệ thống mặc định
         if (!HTTT_LIST.includes(item)) {
             const customText = document.createElement('span');
@@ -519,6 +521,46 @@ function renderHtttCheckboxes(forceCheckAll = false, newlyAddedItem = null) {
         }
 
         container.appendChild(label);
+    });
+}
+
+const DE_XUAT_SUGGESTIONS = [
+    "Bổ sung thiết bị cân bằng tải",
+    "Convert quang điện số lượng: ",
+    "Dây lan quang số lượng: ",
+    "Dây lan thường số lượng: ",
+    "Đi lan quang từ: ",
+    "Bổ sung switch loại có lượng port là: ",
+    "Tủ rack: ",
+    "Số công: "
+];
+
+function renderDeXuatSuggestions() {
+    const container = document.getElementById('quickDeXuatSuggestionsBox');
+    const textarea = document.getElementById('de_xuat_textarea');
+    if (!container || !textarea) return;
+
+    container.innerHTML = '';
+    DE_XUAT_SUGGESTIONS.forEach(text => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 0.8rem; padding: 6px 10px; border-radius: 12px; cursor: pointer; user-select: none; transition: 0.2s;';
+        chip.innerText = '+ ' + text.replace(': ', '');
+        chip.title = "Thêm vào Đề xuất";
+
+        chip.onmouseover = () => chip.style.background = '#bae6fd';
+        chip.onmouseout = () => chip.style.background = '#e0f2fe';
+
+        chip.addEventListener('click', () => {
+            const currentVal = textarea.value;
+            if (currentVal && !currentVal.endsWith('\n')) {
+                textarea.value += '\n- ' + text;
+            } else {
+                textarea.value += '- ' + text;
+            }
+            textarea.focus();
+        });
+
+        container.appendChild(chip);
     });
 }
 
