@@ -24,6 +24,7 @@ const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 
 let allItemsGlobal = [];
+let currentCalendarDate = new Date();
 
 const EXCLUDED_OVERDUE_STATUSES = [
     "Đã gửi lại hồ sơ cho VNPT Khu Vực",
@@ -83,11 +84,12 @@ function renderStats(items) {
 
         statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0 };
+        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0 };
         regionStats[region].total++;
         regionStats[region].status[status] = (regionStats[region].status[status] || 0) + 1;
         if (isNear) regionStats[region].near++;
         if (status === "Đã gửi cho quản lý địa bàn") regionStats[region].sentToRegion++;
+        if (status === "Hồ sơ thiếu thông tin không viết được") regionStats[region].missingInfo++;
 
         if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0, completed: 0, pending: 0, deadlines: {} };
         writerStats[writer].total++;
@@ -105,6 +107,11 @@ function renderStats(items) {
     });
 
     let html = `
+        <div class="section-title"><i class="fas fa-calendar-alt"></i> THEO DÕI HẠN XỬ LÝ THEO THÁNG</div>
+        <div id="calendarContainer">
+            ${renderCalendarInner(items)}
+        </div>
+
         <div class="section-title"><i class="fas fa-chart-pie"></i> I. TỔNG QUAN TÌNH HÌNH VIẾT HỒ SƠ</div>
         <div class="stats-grid">
             <div class="stats-card clickable-stat" onclick="filterAndShow('Tất cả hồ sơ', s => true)">
@@ -152,6 +159,7 @@ function renderStats(items) {
                         <th>Khu vực</th>
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
+                        <th style="text-align: center; color: #ef4444;">Hồ sơ thiếu TT</th>
                         <th style="text-align: center; color: #0369a1;">Đã gửi QLĐB</th>
                         <th>Trạng thái hiện tại</th>
                     </tr>
@@ -169,6 +177,12 @@ function renderStats(items) {
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}" 
                                       onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                                     ${s.near}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #ef4444;" 
+                                      onclick="filterAndShow('Khu vực: ${reg} (Hồ sơ thiếu thông tin)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Hồ sơ thiếu thông tin không viết được'))">
+                                    ${s.missingInfo}
                                 </span>
                             </td>
                             <td style="text-align: center;">
@@ -366,5 +380,87 @@ surveysRef.on('value', (snapshot) => {
         items.push(data);
     });
     allItemsGlobal = items;
-    renderStats(items);
+    renderStats(allItemsGlobal);
 });
+
+function renderCalendarInner(items) {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    // Aggregate deadlines for the selected month (only pending)
+    const dailyCounts = {};
+    items.forEach(s => {
+        const ql = s.quan_ly_ho_so || {};
+        const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
+        const deadline = ql.han_viet_ho_so;
+        if (deadline && !COMPLETED_STATUSES.includes(status)) {
+            const d = new Date(deadline);
+            if (d.getFullYear() === year && d.getMonth() === month) {
+                const day = d.getDate();
+                dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+            }
+        }
+    });
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+    const monthNames = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
+    
+    let calHtml = `
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <h3>${monthNames[month]} ${year}</h3>
+                <div class="calendar-nav">
+                    <button class="nav-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                    <button class="nav-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="calendar-grid">
+                <div class="calendar-day-head">T2</div>
+                <div class="calendar-day-head">T3</div>
+                <div class="calendar-day-head">T4</div>
+                <div class="calendar-day-head">T5</div>
+                <div class="calendar-day-head">T6</div>
+                <div class="calendar-day-head">T7</div>
+                <div class="calendar-day-head">CN</div>
+    `;
+
+    // Adjust first day (JS 0=Sun, we want 1=Mon, ..., 0=Sun)
+    let startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    for (let i = 0; i < startOffset; i++) {
+        calHtml += `<div class="calendar-day empty"></div>`;
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const count = dailyCounts[d] || 0;
+        const isToday = isCurrentMonth && today.getDate() === d;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        
+        calHtml += `
+            <div class="calendar-day ${isToday ? 'today' : ''} ${count > 0 ? 'has-events' : ''}">
+                <span class="day-num">${d}</span>
+                ${count > 0 ? `
+                    <span class="day-count" title="Bấm để xem danh sách" 
+                          onclick="filterAndShow('Hạn xử lý ngày ${d}/${month+1}/${year}', s => s.quan_ly_ho_so?.han_viet_ho_so === '${dateStr}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang))">
+                        ${count}
+                    </span>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    calHtml += `</div></div>`;
+    return calHtml;
+}
+
+window.changeMonth = function(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    const container = document.getElementById('calendarContainer');
+    if (container) {
+        container.innerHTML = renderCalendarInner(allItemsGlobal);
+    }
+};

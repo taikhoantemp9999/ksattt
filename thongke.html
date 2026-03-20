@@ -189,14 +189,125 @@
         .modal-item .name { font-weight: 800; color: #1e293b; }
         .modal-item .sub { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
 
-        .clickable-stat {
-            cursor: pointer;
-            text-decoration: underline dotted;
-            text-underline-offset: 4px;
-        }
         .clickable-stat:hover {
             color: var(--primary);
             opacity: 0.8;
+        }
+
+        /* Calendar Styles */
+        .calendar-container {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            /* Full width allowed */
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .calendar-header h3 {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0;
+        }
+        .calendar-nav {
+            display: flex;
+            gap: 4px;
+        }
+        .nav-btn {
+            background: #f1f5f9;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            transition: all 0.2s;
+            font-size: 0.7rem;
+        }
+        .nav-btn:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+        .calendar-day-head {
+            text-align: center;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #94a3b8;
+            padding: 2px 0;
+            text-transform: uppercase;
+        }
+        .calendar-day {
+            /* aspect-ratio: 2.2; */ /* Remove aspect ratio to let height be minimal */
+            border-radius: 4px;
+            border: 1px solid #f1f5f9;
+            padding: 2px 6px;
+            display: flex;
+            flex-direction: row; /* Thay đổi thành hàng ngang */
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            background: #fcfcfc;
+            min-height: 24px; /* Rất mỏng */
+        }
+        .calendar-day.empty {
+            background: transparent;
+            border: none;
+        }
+        .calendar-day .day-num {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+        .calendar-day.today {
+            border: 1px solid var(--primary);
+            background: #f0f9ff;
+        }
+        .calendar-day.today .day-num {
+            color: var(--primary);
+        }
+        .calendar-day .day-count {
+            /* align-self: flex-start; */
+            background: #fee2e2;
+            color: #ef4444;
+            padding: 0 4px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: none;
+            text-align: right;
+            white-space: nowrap;
+            /* margin-top: -2px; */
+        }
+        .calendar-day.has-events {
+            background: #fff;
+            border-color: #cbd5e1;
+        }
+        .calendar-day.has-events .day-count {
+            display: block;
+        }
+        .calendar-day.has-events .day-num {
+            color: #475569;
+        }
+        .calendar-day.has-events:hover {
+            border-color: var(--primary);
+            z-index: 1;
+            transform: scale(1.02);
         }
     </style>
 </head>
