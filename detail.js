@@ -54,6 +54,39 @@ function renderDetail(data) {
                 <div class="detail-label">Đơn vị khảo sát</div>
                 <div class="detail-value">${data.don_vi_khao_sat}</div>
             </div>
+
+            <div class="detail-row" style="background: #f0f9ff; border-top: 2px solid #bae6fd; border-bottom: 2px solid #bae6fd; margin: 10px 0;">
+                <div class="detail-label" style="font-weight: 800;">TÌNH TRẠNG HỒ SƠ</div>
+                <div class="detail-value">
+                    <div id="statusUpdateWrapper" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <span id="currentStatusText" class="status-badge" style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #7dd3fc;">
+                            ${(data.quan_ly_ho_so && data.quan_ly_ho_so.tinh_trang) || "Mới khảo sát chưa phân công"}
+                        </span>
+                        ${renderStatusUpdateUI(data)}
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Ngày khảo sát</div>
+                <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.ngay_khao_sat) || "N/A"}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Người khảo sát</div>
+                <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.nguoi_khao_sat) || "N/A"}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Người viết hồ sơ</div>
+                <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.nguoi_viet_ho_so) || "N/A"}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Hạn viết hồ sơ</div>
+                <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.han_viet_ho_so) || "N/A"}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">VNPT Khu Vực</div>
+                <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.vnpt_khu_vuc) || "N/A"}</div>
+            </div>
         </div>
 
         <div class="section-header">II. HẠ TẦNG THIẾT BỊ</div>
@@ -168,8 +201,11 @@ function renderDetail(data) {
                 <div class="detail-value">${data.thong_tin_lien_he.cong_an_xa.ho_ten || ""}</div>
             </div>
             <div class="detail-row">
-                <div class="detail-label">Số điện thoại CA</div>
                 <div class="detail-value">${data.thong_tin_lien_he.cong_an_xa.so_dien_thoai || ""}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Đơn vị quản lý cấp trên</div>
+                <div class="detail-value">${data.thong_tin_lien_he.don_vi_quan_ly_cap_tren || "N/A"}</div>
             </div>
         </div>
 
@@ -202,6 +238,7 @@ function renderDetail(data) {
                 </div>
             ` : '<div class="empty-state">Không có hình ảnh hiện trường được tải lên.</div>'}
         </div>
+
 
         ${renderCampusLayoutPreview(data.campusLayout, data.buildingsArray)}
         ${renderBuildingsDetailed(data.buildingsArray)}
@@ -666,3 +703,71 @@ function exportEquipmentExcel(surveyData) {
     const fileName = `danh_sach_thiet_bi_${org || 'khao_sat'}.xlsx`;
     XLSX.writeFile(wb, fileName);
 }
+
+function renderStatusUpdateUI(data) {
+    const auth = authGet();
+    if (!auth) return '';
+
+    const currentStatus = (data.quan_ly_ho_so && data.quan_ly_ho_so.tinh_trang) || "Mới khảo sát chưa phân công";
+    const statusOptions = [
+        "Mới khảo sát chưa phân công",
+        "Đã phân công",
+        "Đang viết hồ sơ",
+        "Hồ sơ thiếu thông tin không viết được",
+        "Đã gửi cho quản lý địa bàn",
+        "Đã gửi lại hồ sơ cho VNPT Khu Vực",
+        "Đã gửi cho CA",
+        "Công an đã phê duyệt",
+        "Công an trả lại"
+    ];
+
+    let allowedOptions = [];
+    if (auth.role === 'admin' || auth.role === 'editor') {
+        allowedOptions = statusOptions;
+    } else if (auth.role === 'viewer') {
+        if (currentStatus === "Đã phân công") {
+            allowedOptions = ["Đang viết hồ sơ", "Hồ sơ thiếu thông tin không viết được", "Đã gửi cho quản lý địa bàn"];
+        } else {
+            return ''; // Viewer cannot update if not in 'Đã phân công' status
+        }
+    } else {
+        return '';
+    }
+
+    if (allowedOptions.length === 0) return '';
+
+    const id = new URLSearchParams(window.location.search).get('id');
+    
+    return `
+        <select id="selectStatusUpdate" style="padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
+            <option value="">-- Cập nhật trạng thái --</option>
+            ${allowedOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+        </select>
+        <button type="button" onclick="updateSurveyStatus('${id}')" 
+            style="padding: 6px 12px; font-size: 0.85rem; background: var(--primary); color: white; border-radius: 6px;">
+            Cập nhật
+        </button>
+    `;
+}
+
+window.updateSurveyStatus = function(id) {
+    const select = document.getElementById('selectStatusUpdate');
+    const newStatus = select.value;
+    if (!newStatus) {
+        alert("Vui lòng chọn trạng thái mới.");
+        return;
+    }
+
+    if (!confirm(`Xác nhận chuyển trạng thái sang: ${newStatus}?`)) return;
+
+    database.ref('surveys_ATTT').child(id).update({
+        "quan_ly_ho_so/tinh_trang": newStatus,
+        "nguoi_cap_nhat_trang_thai": authGet().user,
+        "thoi_gian_cap_nhat_trang_thai": new Date().toISOString()
+    }).then(() => {
+        alert("Cập nhật trạng thái thành công!");
+        location.reload();
+    }).catch(err => {
+        alert("Lỗi khi cập nhật trạng thái: " + err.message);
+    });
+};

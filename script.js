@@ -174,6 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSelectImages.addEventListener('click', () => imageInput.click());
         imageInput.addEventListener('change', handleImageSelection);
     }
+
+    // Set default value for ngay_khao_sat
+    const ngayKhaoSatInput = document.getElementById('ngay_khao_sat');
+    if (ngayKhaoSatInput && !ngayKhaoSatInput.value) {
+        ngayKhaoSatInput.value = new Date().toISOString().split('T')[0];
+    }
 });
 
 function handleImageSelection(e) {
@@ -620,7 +626,15 @@ function getFormData() {
                 so_dien_thoai: formData.get('thong_tin_lien_he.cong_an_xa.so_dien_thoai')
             }
         },
-        hinh_anh_hien_truong: uploadedImages
+        hinh_anh_hien_truong: uploadedImages,
+        quan_ly_ho_so: {
+            ngay_khao_sat: formData.get('quan_ly_ho_so.ngay_khao_sat') || "",
+            nguoi_khao_sat: formData.get('quan_ly_ho_so.nguoi_khao_sat') || "",
+            nguoi_viet_ho_so: formData.get('quan_ly_ho_so.nguoi_viet_ho_so') || "",
+            han_viet_ho_so: formData.get('quan_ly_ho_so.han_viet_ho_so') || "",
+            vnpt_khu_vuc: formData.get('quan_ly_ho_so.vnpt_khu_vuc') || "",
+            tinh_trang: formData.get('quan_ly_ho_so.tinh_trang') || "Mới khảo sát chưa phân công"
+        }
     };
 }
 
@@ -731,6 +745,7 @@ function loadSurveyToForm(id) {
     if (!survey.thong_tin_lien_he.don_vi_van_hanh) survey.thong_tin_lien_he.don_vi_van_hanh = {};
     if (!survey.thong_tin_lien_he.cong_an_xa) survey.thong_tin_lien_he.cong_an_xa = {};
     if (!Array.isArray(survey.he_thong_thong_tin)) survey.he_thong_thong_tin = [];
+    if (!survey.quan_ly_ho_so) survey.quan_ly_ho_so = {};
 
     const form = document.getElementById('surveyForm');
     form.reset(); // clear cũ
@@ -789,6 +804,14 @@ function loadSurveyToForm(id) {
 
     form.elements['thong_tin_lien_he.cong_an_xa.ho_ten'].value = survey.thong_tin_lien_he.cong_an_xa.ho_ten || "";
     form.elements['thong_tin_lien_he.cong_an_xa.so_dien_thoai'].value = survey.thong_tin_lien_he.cong_an_xa.so_dien_thoai || "";
+
+    // Quản lý hồ sơ
+    form.elements['quan_ly_ho_so.ngay_khao_sat'].value = survey.quan_ly_ho_so.ngay_khao_sat || new Date().toISOString().split('T')[0];
+    form.elements['quan_ly_ho_so.nguoi_khao_sat'].value = survey.quan_ly_ho_so.nguoi_khao_sat || "";
+    form.elements['quan_ly_ho_so.nguoi_viet_ho_so'].value = survey.quan_ly_ho_so.nguoi_viet_ho_so || "";
+    form.elements['quan_ly_ho_so.han_viet_ho_so'].value = survey.quan_ly_ho_so.han_viet_ho_so || "";
+    form.elements['quan_ly_ho_so.vnpt_khu_vuc'].value = survey.quan_ly_ho_so.vnpt_khu_vuc || "";
+    form.elements['quan_ly_ho_so.tinh_trang'].value = survey.quan_ly_ho_so.tinh_trang || "Mới khảo sát chưa phân công";
 
     // Hình ảnh
     uploadedImages = Array.isArray(survey.hinh_anh_hien_truong) ? survey.hinh_anh_hien_truong : [];

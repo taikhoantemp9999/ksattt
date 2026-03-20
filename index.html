@@ -88,11 +88,73 @@
                 <!-- Section 1: Thông tin chung -->
                 <section class="form-section group-card">
                     <h2>I. Thông tin chung</h2>
-                    <div class="input-group">
-                        <label for="don_vi_khao_sat">Đơn vị khảo sát (Xã/Phường) <span class="required">*</span></label>
-                        <input type="text" id="don_vi_khao_sat" name="don_vi_khao_sat" placeholder="VD: Xã Yên Lập"
-                            required>
-                    </div>
+                        <div class="input-group">
+                            <label for="don_vi_khao_sat">Đơn vị được khảo sát <span class="required">*</span></label>
+                            <input type="text" id="don_vi_khao_sat" name="don_vi_khao_sat" required
+                                placeholder="Tên đơn vị/tổ chức">
+                        </div>
+
+                        <!-- Administrative Info moved here -->
+                        <div class="input-group">
+                            <label for="ngay_khao_sat">Ngày khảo sát</label>
+                            <input type="date" id="ngay_khao_sat" name="quan_ly_ho_so.ngay_khao_sat">
+                        </div>
+                        <div class="input-group">
+                            <label for="nguoi_khao_sat">Người khảo sát</label>
+                            <select id="nguoi_khao_sat" name="quan_ly_ho_so.nguoi_khao_sat"
+                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
+                                <option value="">-- Chọn người khảo sát --</option>
+                                <option value="Ngô Tuấn Ngọc">Ngô Tuấn Ngọc</option>
+                                <option value="Ngô Quang Hưng">Ngô Quang Hưng</option>
+                                <option value="Nguyễn Đức Hoàng">Nguyễn Đức Hoàng</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="nguoi_viet_ho_so">Người viết hồ sơ</label>
+                            <select id="nguoi_viet_ho_so" name="quan_ly_ho_so.nguoi_viet_ho_so"
+                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
+                                <option value="">-- Chọn người viết hồ sơ --</option>
+                                <option value="Vũ Trường Giang">Vũ Trường Giang</option>
+                                <option value="Tạ Anh Tuấn">Tạ Anh Tuấn</option>
+                                <option value="Nguyễn Quyết Thắng">Nguyễn Quyết Thắng</option>
+                                <option value="Trần Đại Dương">Trần Đại Dương</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="han_viet_ho_so">Hạn viết hồ sơ</label>
+                            <input type="date" id="han_viet_ho_so" name="quan_ly_ho_so.han_viet_ho_so">
+                        </div>
+                        <div class="input-group">
+                            <label for="vnpt_khu_vuc">VNPT Khu Vực</label>
+                            <select id="vnpt_khu_vuc" name="quan_ly_ho_so.vnpt_khu_vuc"
+                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
+                                <option value="">-- Chọn VNPT Khu Vực --</option>
+                                <option value="Việt Trì">Việt Trì</option>
+                                <option value="Thanh Ba">Thanh Ba</option>
+                                <option value="Thanh Thủy">Thanh Thủy</option>
+                                <option value="Cẩm Khê">Cẩm Khê</option>
+                                <option value="Thanh Sơn">Thanh Sơn</option>
+                                <option value="Tân Sơn">Tân Sơn</option>
+                                <option value="Hạ Hòa">Hạ Hòa</option>
+                                <option value="Sở Ban Ngành">Sở Ban Ngành</option>
+                                <option value="Y tế">Y tế</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="tinh_trang">Tình trạng</label>
+                            <select id="tinh_trang" name="quan_ly_ho_so.tinh_trang"
+                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
+                                <option value="Mới khảo sát chưa phân công">Mới khảo sát chưa phân công</option>
+                                <option value="Đã phân công">Đã phân công</option>
+                                <option value="Đang viết hồ sơ">Đang viết hồ sơ</option>
+                                <option value="Hồ sơ thiếu thông tin không viết được">Hồ sơ thiếu thông tin không viết được</option>
+                                <option value="Đã gửi cho quản lý địa bàn">Đã gửi cho quản lý địa bàn</option>
+                                <option value="Đã gửi lại hồ sơ cho VNPT Khu Vực">Đã gửi lại hồ sơ cho VNPT Khu Vực</option>
+                                <option value="Đã gửi cho CA">Đã gửi cho CA</option>
+                                <option value="Công an đã phê duyệt">Công an đã phê duyệt</option>
+                                <option value="Công an trả lại">Công an trả lại</option>
+                            </select>
+                        </div>
                     <div id="buildingSurveyWrapper"
                         style="display: none; margin-top: 16px; background: #e0f2fe; padding: 12px; border-radius: 8px; border: 1px dashed #0284c7;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
