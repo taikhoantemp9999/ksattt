@@ -153,6 +153,14 @@ function renderList(items) {
                     </div>
                 </div>
 
+                <!-- Middle Section: Note (if exists) -->
+                ${(survey.quan_ly_ho_so && survey.quan_ly_ho_so.ghi_chu_viet_ho_so) ? `
+                <div style="margin-top: 8px; padding: 8px 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; font-size: 0.85rem; color: #475569; line-height: 1.4;">
+                    <i class="fas fa-sticky-note" style="color: #94a3b8; margin-right: 6px;"></i>
+                    ${survey.quan_ly_ho_so.ghi_chu_viet_ho_so}
+                </div>
+                ` : ''}
+
                 <!-- Bottom Section: Buttons in one row -->
                 <div class="btns" style="display: flex; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 10px; justify-content: flex-end;">
                     <button class="mini-btn primary" type="button" data-action="detail" style="flex: 1; max-width: 100px;">Chi tiết</button>

@@ -330,6 +330,13 @@ function filterAndShow(title, filterFn) {
                             </div>
                         </div>
                     </div>
+                    <!-- Row mới cho ghi chú -->
+                    ${ql.ghi_chu_viet_ho_so ? `
+                    <div style="margin-top: 10px; padding: 8px 10px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; font-size: 0.75rem; color: #475569; line-height: 1.4;">
+                        <i class="fas fa-sticky-note" style="color: #94a3b8; margin-right: 4px;"></i>
+                        ${ql.ghi_chu_viet_ho_so}
+                    </div>
+                    ` : ''}
                 </a>
             `;
         });
