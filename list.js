@@ -36,17 +36,23 @@ if (roleBadge) {
     roleBadge.innerText = `Tài khoản: ${auth.user} • Quyền: ${roleText}`;
 }
 
-if (editorActions) {
-    editorActions.style.display = isEditor ? 'flex' : 'none';
-    if (isAdmin) {
-        const btnManageUsers = document.getElementById('btnManageUsers');
-        if (btnManageUsers) {
-            btnManageUsers.style.display = 'block';
-            btnManageUsers.addEventListener('click', () => {
-                window.location.href = 'tk.html';
-            });
-        }
+if (btnAddNew) {
+    btnAddNew.style.display = isEditor ? 'inline-flex' : 'none';
+}
+
+if (isAdmin) {
+    const btnManageUsers = document.getElementById('btnManageUsers');
+    if (btnManageUsers) {
+        btnManageUsers.style.display = 'inline-flex';
+        btnManageUsers.addEventListener('click', () => {
+            window.location.href = 'tk.html';
+        });
     }
+}
+
+// Ensure editorActions container itself is visible if it contains something visible
+if (editorActions) {
+    editorActions.style.display = 'flex';
 }
 if (btnAddNew) {
     btnAddNew.addEventListener('click', () => {
