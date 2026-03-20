@@ -91,10 +91,11 @@ function renderStats(items) {
         if (status === "Đã gửi cho quản lý địa bàn") regionStats[region].sentToRegion++;
         if (status === "Hồ sơ thiếu thông tin không viết được") regionStats[region].missingInfo++;
 
-        if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0, completed: 0, pending: 0, deadlines: {} };
+        if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0, completed: 0, pending: 0, deadlines: {}, missingInfo: 0 };
         writerStats[writer].total++;
         writerStats[writer].status[status] = (writerStats[writer].status[status] || 0) + 1;
         if (isNear) writerStats[writer].near++;
+        if (status === "Hồ sơ thiếu thông tin không viết được") writerStats[writer].missingInfo++;
         
         if (COMPLETED_STATUSES.includes(status)) {
             writerStats[writer].completed++;
@@ -208,6 +209,8 @@ function renderStats(items) {
                         <th>Người viết hồ sơ</th>
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
+                        <th style="text-align: center; color: #ef4444;">Thiếu TT</th>
+                        <th style="text-align: center; color: #f59e0b;">Đang viết</th>
                         <th style="text-align: center; color: #16a34a;">Đã xong</th>
                         <th style="text-align: center; color: #ef4444;">Chưa xong</th>
                         <th style="width: 180px;">Phân bổ hạn (Chưa xong)</th>
@@ -227,6 +230,18 @@ function renderStats(items) {
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}"
                                       onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                                     ${s.near}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #ef4444;"
+                                      onclick="filterAndShow('Người viết: ${wr} (Hồ sơ thiếu thông tin)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && (s.quan_ly_ho_so?.tinh_trang === 'Hồ sơ thiếu thông tin không viết được'))">
+                                    ${s.missingInfo}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #f59e0b;"
+                                      onclick="filterAndShow('Người viết: ${wr} (Đang viết)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được'))">
+                                    ${s.pending - s.missingInfo}
                                 </span>
                             </td>
                             <td style="text-align: center;">
