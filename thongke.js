@@ -135,13 +135,13 @@ function renderStats(items) {
                         <tr>
                             <td style="font-weight: 700; color: #1e293b;">${reg}</td>
                             <td style="text-align: center;">
-                                <span class="clickable-stat" style="font-weight: 800; color: #0369a1;" onclick="filterAndShow('Khu vực: ${reg}', s => s.quan_ly_ho_so?.vnpt_khu_vuc === '${reg}')">
+                                <span class="clickable-stat" style="font-weight: 800; color: #0369a1;" onclick="filterAndShow('Khu vực: ${reg}', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}')">
                                     ${s.total}
                                 </span>
                             </td>
                             <td style="text-align: center;">
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}" 
-                                      onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => s.quan_ly_ho_so?.vnpt_khu_vuc === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
+                                      onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
                                     ${s.near}
                                 </span>
                             </td>
@@ -170,13 +170,13 @@ function renderStats(items) {
                         <tr>
                             <td style="font-weight: 700; color: #1e293b;">${wr}</td>
                             <td style="text-align: center;">
-                                <span class="clickable-stat" style="font-weight: 800; color: #0369a1;" onclick="filterAndShow('Người viết: ${wr}', s => s.quan_ly_ho_so?.nguoi_viet_ho_so === '${wr}')">
+                                <span class="clickable-stat" style="font-weight: 800; color: #0369a1;" onclick="filterAndShow('Người viết: ${wr}', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}')">
                                     ${s.total}
                                 </span>
                             </td>
                             <td style="text-align: center;">
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}"
-                                      onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => s.quan_ly_ho_so?.nguoi_viet_ho_so === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
+                                      onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
                                     ${s.near}
                                 </span>
                             </td>
