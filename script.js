@@ -648,7 +648,8 @@ function getFormData() {
             nguoi_viet_ho_so: formData.get('quan_ly_ho_so.nguoi_viet_ho_so') || "",
             han_viet_ho_so: formData.get('quan_ly_ho_so.han_viet_ho_so') || "",
             vnpt_khu_vuc: formData.get('quan_ly_ho_so.vnpt_khu_vuc') || "",
-            tinh_trang: formData.get('quan_ly_ho_so.tinh_trang') || "Mới khảo sát chưa phân công"
+            tinh_trang: formData.get('quan_ly_ho_so.tinh_trang') || "Mới khảo sát chưa phân công",
+            ghi_chu_viet_ho_so: formData.get('quan_ly_ho_so.ghi_chu_viet_ho_so') || ""
         }
     };
 }
@@ -827,6 +828,9 @@ function loadSurveyToForm(id) {
     form.elements['quan_ly_ho_so.han_viet_ho_so'].value = survey.quan_ly_ho_so.han_viet_ho_so || "";
     form.elements['quan_ly_ho_so.vnpt_khu_vuc'].value = survey.quan_ly_ho_so.vnpt_khu_vuc || "";
     form.elements['quan_ly_ho_so.tinh_trang'].value = survey.quan_ly_ho_so.tinh_trang || "Mới khảo sát chưa phân công";
+    if (form.elements['quan_ly_ho_so.ghi_chu_viet_ho_so']) {
+        form.elements['quan_ly_ho_so.ghi_chu_viet_ho_so'].value = survey.quan_ly_ho_so.ghi_chu_viet_ho_so || "";
+    }
 
     // Hình ảnh
     uploadedImages = Array.isArray(survey.hinh_anh_hien_truong) ? survey.hinh_anh_hien_truong : [];

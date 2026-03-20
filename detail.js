@@ -84,6 +84,22 @@ function renderDetail(data) {
                 <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.han_viet_ho_so) || "N/A"}</div>
             </div>
             <div class="detail-row">
+                <div class="detail-label" style="display: flex; flex-direction: column; gap: 4px;">
+                    <span>Ghi chú viết hồ sơ</span>
+                    <p style="font-size: 0.75rem; font-weight: 400; color: #94a3b8; margin: 0;">(Tất cả các quyền đều có thể cập nhật)</p>
+                </div>
+                <div class="detail-value">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <textarea id="noteUpdateTextArea" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; min-height: 80px; background: #fff;">${(data.quan_ly_ho_so && data.quan_ly_ho_so.ghi_chu_viet_ho_so) || ""}</textarea>
+                        <button type="button" onclick="updateWritingNotes('${new URLSearchParams(window.location.search).get('id')}')" 
+                            style="align-self: flex-end; padding: 6px 16px; font-size: 0.85rem; background: #0f172a; color: white; border-radius: 6px; font-weight: 600;">
+                            Lưu ghi chú
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-row">
                 <div class="detail-label">VNPT Khu Vực</div>
                 <div class="detail-value">${(data.quan_ly_ho_so && data.quan_ly_ho_so.vnpt_khu_vuc) || "N/A"}</div>
             </div>
@@ -725,10 +741,23 @@ function renderStatusUpdateUI(data) {
     if (auth.role === 'admin' || auth.role === 'editor') {
         allowedOptions = statusOptions;
     } else if (auth.role === 'viewer') {
-        if (currentStatus === "Đã phân công") {
-            allowedOptions = ["Đang viết hồ sơ", "Hồ sơ thiếu thông tin không viết được", "Đã gửi cho quản lý địa bàn"];
+        const viewerAllowedFrom = [
+            "Mới khảo sát chưa phân công",
+            "Đã phân công",
+            "Đang viết hồ sơ",
+            "Hồ sơ thiếu thông tin không viết được",
+            "Đã tiếp xúc chờ khách hàng phản hồi"
+        ];
+        
+        if (viewerAllowedFrom.includes(currentStatus)) {
+            allowedOptions = [
+                "Mới khảo sát chưa phân công",
+                "Đã phân công",
+                "Đang viết hồ sơ",
+                "Hồ sơ thiếu thông tin không viết được"
+            ];
         } else {
-            return ''; // Viewer cannot update if not in 'Đã phân công' status
+            return ''; // Viewer cannot update if not in allowed statuses
         }
     } else {
         return '';
@@ -769,5 +798,19 @@ window.updateSurveyStatus = function(id) {
         location.reload();
     }).catch(err => {
         alert("Lỗi khi cập nhật trạng thái: " + err.message);
+    });
+};
+
+window.updateWritingNotes = function(id) {
+    const newNote = document.getElementById('noteUpdateTextArea').value;
+    
+    database.ref('surveys_ATTT').child(id).update({
+        "quan_ly_ho_so/ghi_chu_viet_ho_so": newNote,
+        "nguoi_cap_nhat_ghi_chu": authGet().user,
+        "thoi_gian_cap_nhat_ghi_chu": new Date().toISOString()
+    }).then(() => {
+        alert("Cập nhật ghi chú thành công!");
+    }).catch(err => {
+        alert("Lỗi khi cập nhật ghi chú: " + err.message);
     });
 };
