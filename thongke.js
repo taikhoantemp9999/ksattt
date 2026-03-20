@@ -25,6 +25,12 @@ const modalBody = document.getElementById('modalBody');
 
 let allItemsGlobal = [];
 
+const EXCLUDED_OVERDUE_STATUSES = [
+    "Đã gửi lại hồ sơ cho VNPT Khu Vực",
+    "Đã gửi cho CA",
+    "Công an đã phê duyệt"
+];
+
 // Identity display
 if (roleBadge) {
     let roleText = 'Xem';
@@ -63,7 +69,7 @@ function renderStats(items) {
         const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
         const region = ql.vnpt_khu_vuc || "Chưa xác định";
         const writer = ql.nguoi_viet_ho_so || "Chưa phân công";
-        const isNear = isDeadlineNear(ql.han_viet_ho_so);
+        const isNear = isDeadlineNear(ql.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(status);
 
         if (isNear) nearOverdue++;
 
@@ -87,7 +93,8 @@ function renderStats(items) {
                 <h3>Tổng số đã khảo sát</h3>
                 <div class="value">${total}</div>
             </div>
-            <div class="stats-card clickable-stat" style="border-color: #fca5a5; background: #fff1f2;" onclick="filterAndShow('Hồ sơ sắp hết hạn / quá hạn', s => isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
+            <div class="stats-card clickable-stat" style="border-color: #fca5a5; background: #fff1f2;" 
+                 onclick="filterAndShow('Hồ sơ sắp hết hạn / quá hạn', s => isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                 <h3 style="color: #991b1b;">Sắp hết hạn / Quá hạn</h3>
                 <div class="value" style="color: #ef4444;">${nearOverdue}</div>
             </div>
@@ -141,7 +148,7 @@ function renderStats(items) {
                             </td>
                             <td style="text-align: center;">
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}" 
-                                      onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
+                                      onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                                     ${s.near}
                                 </span>
                             </td>
@@ -176,7 +183,7 @@ function renderStats(items) {
                             </td>
                             <td style="text-align: center;">
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}"
-                                      onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so))">
+                                      onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                                     ${s.near}
                                 </span>
                             </td>
@@ -204,7 +211,7 @@ function filterAndShow(title, filterFn) {
         filtered.sort((a,b) => new Date(b.thoi_gian_nhap) - new Date(a.thoi_gian_nhap)).forEach(item => {
             const ql = item.quan_ly_ho_so || {};
             const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
-            const isNear = isDeadlineNear(ql.han_viet_ho_so);
+            const isNear = isDeadlineNear(ql.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(status);
 
             // Role-based link: Editor/Admin -> Edit page, Viewer -> Detail page
             const targetUrl = (auth.role === 'editor' || auth.role === 'admin') 
