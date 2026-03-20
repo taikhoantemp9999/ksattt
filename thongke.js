@@ -84,7 +84,7 @@ function renderStats(items) {
 
         statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0 };
+        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0, pending: 0 };
         regionStats[region].total++;
         regionStats[region].status[status] = (regionStats[region].status[status] || 0) + 1;
         if (isNear) regionStats[region].near++;
@@ -101,6 +101,7 @@ function renderStats(items) {
             writerStats[writer].completed++;
         } else {
             writerStats[writer].pending++;
+            regionStats[region].pending++;
             if (ql.han_viet_ho_so) {
                 writerStats[writer].deadlines[ql.han_viet_ho_so] = (writerStats[writer].deadlines[ql.han_viet_ho_so] || 0) + 1;
             }
@@ -160,7 +161,8 @@ function renderStats(items) {
                         <th>Khu vực</th>
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
-                        <th style="text-align: center; color: #ef4444;">Hồ sơ thiếu TT</th>
+                        <th style="text-align: center; color: #ef4444;">Thiếu TT</th>
+                        <th style="text-align: center; color: #f59e0b;">Đang viết</th>
                         <th style="text-align: center; color: #0369a1;">Đã gửi QLĐB</th>
                         <th>Trạng thái hiện tại</th>
                     </tr>
@@ -184,6 +186,12 @@ function renderStats(items) {
                                 <span class="clickable-stat" style="font-weight: 800; color: #ef4444;" 
                                       onclick="filterAndShow('Khu vực: ${reg} (Hồ sơ thiếu thông tin)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Hồ sơ thiếu thông tin không viết được'))">
                                     ${s.missingInfo}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #f59e0b;" 
+                                      onclick="filterAndShow('Khu vực: ${reg} (Đang viết)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được'))">
+                                    ${s.pending - s.missingInfo}
                                 </span>
                             </td>
                             <td style="text-align: center;">

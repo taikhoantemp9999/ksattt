@@ -13,6 +13,23 @@ const HTTT_LIST = [
     "Kiểm soát thủ tục hành chính"
 ];
 
+const WRITER_LIST = [
+    "Vũ Trường Giang",
+    "Tạ Anh Tuấn",
+    "Nguyễn Quyết Thắng",
+    "Trần Đại Dương",
+    "Ngô Tuấn Ngọc",
+    "Nguyễn Đức Hoàng"
+];
+
+const COMPLETED_STATUSES = [
+    "Đã gửi cho quản lý địa bàn",
+    "Đã gửi lại hồ sơ cho VNPT Khu Vực",
+    "Đã gửi cho CA",
+    "Công an đã phê duyệt",
+    "Công an trả lại"
+];
+
 // Biến lưu trữ danh sách Hệ thống do người quản trị cấu hình
 let dynamicHtttList = JSON.parse(localStorage.getItem('CUSTOM_HTTT_MANAGER')) || [...HTTT_LIST];
 
@@ -62,6 +79,7 @@ surveysRef.on('value', (snapshot) => {
     // Lưu ý: data này sẽ được cached ra localstorage để phòng khi offline
     localStorage.setItem('CACHED_SURVEYS', JSON.stringify(localSurveys));
 
+    renderWriterSelect();
     updateCountBadge();
 
     // Nếu modal đang mở thì cập nhật luôn giao diện
@@ -88,16 +106,68 @@ if (!preloadEditId && pageMode !== 'new') {
 
 // Khởi tạo
 document.addEventListener('DOMContentLoaded', () => {
-    renderHtttCheckboxes(false); // Sửa lại thành false để KHÔNG tự động tick khi F5 màn hình trắng
-    // updateCountBadge() sẽ được gọi tự động khi Firebase trả data về
-
+    renderHtttCheckboxes(false); 
     renderDeXuatSuggestions();
 
     const form = document.getElementById('surveyForm');
-    form.addEventListener('submit', handleFormSubmit);
+    if (form) form.addEventListener('submit', handleFormSubmit);
 
-    document.getElementById('btnExport').addEventListener('click', exportToExcel);
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) btnExport.addEventListener('click', exportToExcel);
+});
 
+function renderWriterSelect() {
+    const select = document.getElementById('nguoi_viet_ho_so');
+    if (!select) return;
+
+    // Lưu lại giá trị hiện tại để không bị mất khi re-render
+    const currentValue = select.value;
+
+    // Tính toán thống kê cho mỗi người viết
+    const writerStats = {};
+    WRITER_LIST.forEach(name => {
+        writerStats[name] = { pending: 0, missingInfo: 0 };
+    });
+
+    localSurveys.forEach(s => {
+        const ql = s.quan_ly_ho_so || {};
+        const writer = ql.nguoi_viet_ho_so;
+        const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
+
+        if (writer && writerStats[writer]) {
+            if (!COMPLETED_STATUSES.includes(status)) {
+                writerStats[writer].pending++;
+                if (status === "Hồ sơ thiếu thông tin không viết được") {
+                    writerStats[writer].missingInfo++;
+                }
+            }
+        }
+    });
+
+    // Sắp xếp danh sách người viết dựa trên số lượng "Đang viết" (pending - missingInfo) tăng dần
+    const sortedWriters = [...WRITER_LIST].sort((a, b) => {
+        const activeA = writerStats[a].pending - writerStats[a].missingInfo;
+        const activeB = writerStats[b].pending - writerStats[b].missingInfo;
+        return activeA - activeB;
+    });
+
+    // Render lại options
+    let html = '<option value="">-- Chọn người viết hồ sơ --</option>';
+    sortedWriters.forEach(name => {
+        const activeCount = writerStats[name].pending - writerStats[name].missingInfo;
+        const missingCount = writerStats[name].missingInfo;
+        html += `<option value="${name}">${name} (Đang viết: ${activeCount}, thiếu TT: ${missingCount})</option>`;
+    });
+
+    select.innerHTML = html;
+    
+    // Khôi phục lại giá trị cũ nếu nó vẫn tồn tại trong list
+    if (currentValue) {
+        select.value = currentValue;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     const btnToggleBuildingPreview = document.getElementById('btnToggleBuildingPreview');
     if (btnToggleBuildingPreview) {
         btnToggleBuildingPreview.addEventListener('click', () => {
