@@ -75,10 +75,11 @@ function renderStats(items) {
 
         statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0 };
+        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0 };
         regionStats[region].total++;
         regionStats[region].status[status] = (regionStats[region].status[status] || 0) + 1;
         if (isNear) regionStats[region].near++;
+        if (status === "Đã gửi cho quản lý địa bàn") regionStats[region].sentToRegion++;
 
         if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0 };
         writerStats[writer].total++;
@@ -134,6 +135,7 @@ function renderStats(items) {
                         <th>Khu vực</th>
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
+                        <th style="text-align: center; color: #0369a1;">Đã gửi QLĐB</th>
                         <th>Trạng thái hiện tại</th>
                     </tr>
                 </thead>
@@ -150,6 +152,12 @@ function renderStats(items) {
                                 <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}" 
                                       onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                                     ${s.near}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #0369a1;" 
+                                      onclick="filterAndShow('Khu vực: ${reg} (Đã gửi QLĐB)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Đã gửi cho quản lý địa bàn'))">
+                                    ${s.sentToRegion}
                                 </span>
                             </td>
                             <td style="font-size: 0.8rem; color: #64748b; line-height: 1.5;">
@@ -192,6 +200,36 @@ function renderStats(items) {
                             </td>
                         </tr>
                     `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section-title"><i class="fas fa-paper-plane"></i> IV. HỒ SƠ ĐÃ GỬI CHO QUẢN LÝ ĐỊA BÀN (THEO KHU VỰC)</div>
+        <div class="stats-table-wrapper" style="margin-bottom: 30px;">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>VNPT Khu vực</th>
+                        <th style="text-align: center; width: 140px;">Số lượng đã gửi</th>
+                        <th>Trạng thái khác tại khu vực này</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(regionStats).filter(([reg, s]) => s.sentToRegion > 0).sort((a,b) => b[1].sentToRegion - a[1].sentToRegion).map(([reg, s]) => `
+                        <tr>
+                            <td style="font-weight: 700; color: #1e293b;">${reg}</td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #0369a1; font-size: 1.2rem;" 
+                                      onclick="filterAndShow('Khu vực: ${reg} (Đã gửi QLĐB)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Đã gửi cho quản lý địa bàn'))">
+                                    ${s.sentToRegion}
+                                </span>
+                            </td>
+                            <td style="font-size: 0.8rem; color: #64748b; line-height: 1.4;">
+                                ${Object.entries(s.status).filter(([st]) => st !== 'Đã gửi cho quản lý địa bàn').map(([st, c]) => `${st}: <b>${c}</b>`).join(' | ')}
+                            </td>
+                        </tr>
+                    `).join('')}
+                    ${Object.values(regionStats).every(s => s.sentToRegion === 0) ? '<tr><td colspan="3" style="text-align:center; padding: 24px; color: #94a3b8; font-style: italic;">Chưa có dữ liệu "Đã gửi cho quản lý địa bàn" tại bất kỳ khu vực nào.</td></tr>' : ''}
                 </tbody>
             </table>
         </div>

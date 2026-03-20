@@ -23,6 +23,9 @@ const btnLogout = document.getElementById('btnLogout');
 const editorActions = document.getElementById('editorActions');
 const btnAddNew = document.getElementById('btnAddNew');
 const listContainer = document.getElementById('listContainer');
+const searchInput = document.getElementById('searchInput');
+
+let allSurveys = []; // Store original data
 
 btnLogout.addEventListener('click', authLogout);
 
@@ -184,12 +187,31 @@ function renderList(items) {
 }
 
 surveysRef.on('value', (snapshot) => {
-    const items = [];
+    allSurveys = [];
     snapshot.forEach((child) => {
         const data = child.val() || {};
         data.id = child.key;
-        items.push(data);
+        allSurveys.push(data);
     });
-    renderList(items);
+    // Trình bày ban đầu (không lọc)
+    renderList(allSurveys);
 });
+
+// Logic tìm kiếm
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (!query) {
+            renderList(allSurveys);
+            return;
+        }
+
+        const filtered = allSurveys.filter(s => {
+            const name = (s.don_vi_khao_sat || "").toLowerCase();
+            return name.includes(query);
+        });
+
+        renderList(filtered);
+    });
+}
 
