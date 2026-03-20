@@ -31,6 +31,14 @@ const EXCLUDED_OVERDUE_STATUSES = [
     "Công an đã phê duyệt"
 ];
 
+const COMPLETED_STATUSES = [
+    "Đã gửi cho quản lý địa bàn",
+    "Đã gửi lại hồ sơ cho VNPT Khu Vực",
+    "Đã gửi cho CA",
+    "Công an đã phê duyệt",
+    "Công an trả lại"
+];
+
 // Identity display
 if (roleBadge) {
     let roleText = 'Xem';
@@ -81,10 +89,19 @@ function renderStats(items) {
         if (isNear) regionStats[region].near++;
         if (status === "Đã gửi cho quản lý địa bàn") regionStats[region].sentToRegion++;
 
-        if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0 };
+        if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0, completed: 0, pending: 0, deadlines: {} };
         writerStats[writer].total++;
         writerStats[writer].status[status] = (writerStats[writer].status[status] || 0) + 1;
         if (isNear) writerStats[writer].near++;
+        
+        if (COMPLETED_STATUSES.includes(status)) {
+            writerStats[writer].completed++;
+        } else {
+            writerStats[writer].pending++;
+            if (ql.han_viet_ho_so) {
+                writerStats[writer].deadlines[ql.han_viet_ho_so] = (writerStats[writer].deadlines[ql.han_viet_ho_so] || 0) + 1;
+            }
+        }
     });
 
     let html = `
@@ -177,6 +194,9 @@ function renderStats(items) {
                         <th>Người viết hồ sơ</th>
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
+                        <th style="text-align: center; color: #16a34a;">Đã xong</th>
+                        <th style="text-align: center; color: #ef4444;">Chưa xong</th>
+                        <th style="width: 180px;">Phân bổ hạn (Chưa xong)</th>
                         <th>Trạng thái hiện tại</th>
                     </tr>
                 </thead>
@@ -194,6 +214,29 @@ function renderStats(items) {
                                       onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
                                     ${s.near}
                                 </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #16a34a;"
+                                      onclick="filterAndShow('Người viết: ${wr} (Đã xong)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
+                                    ${s.completed}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #ef4444;"
+                                      onclick="filterAndShow('Người viết: ${wr} (Chưa xong)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
+                                    ${s.pending}
+                                </span>
+                            </td>
+                            <td style="font-size: 0.8rem; color: #475569;">
+                                ${Object.keys(s.deadlines).length > 0 ? Object.entries(s.deadlines).sort((a,b) => new Date(a[0]) - new Date(b[0])).map(([date, count]) => `
+                                    <div style="margin-bottom: 2px;">
+                                        <span style="font-weight: 700; color: #1e293b;">${date.split('-').reverse().join('/')}:</span> 
+                                        <span class="clickable-stat" style="color: #0369a1; font-weight: 800;" 
+                                              onclick="filterAndShow('Hạn ${date} (${wr})', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && s.quan_ly_ho_so?.han_viet_ho_so === '${date}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
+                                            ${count}
+                                        </span>
+                                    </div>
+                                `).join('') : '<span style="color: #94a3b8; font-style: italic;">N/A</span>'}
                             </td>
                             <td style="font-size: 0.8rem; color: #64748b; line-height: 1.5;">
                                 ${Object.entries(s.status).map(([st, c]) => `${st}: <b>${c}</b>`).join(' | ')}
