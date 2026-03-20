@@ -26,6 +26,15 @@
                 <p>Công cụ thu thập dữ liệu tối ưu cho di động</p>
             </div>
             <div class="header-actions">
+                <button type="button" id="btnBackToListGlobal" class="action-btn"
+                    style="background:#64748b; color:#fff; border: 1px solid #475569;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Quay lại
+                </button>
                 <button type="button" id="btnManageUsersGlobal" class="action-btn"
                     style="display:none; background:#0f172a; color:#fff; border: 1px solid #1e293b;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -96,12 +105,12 @@
 
                         <!-- Administrative Info moved here -->
                         <div class="input-group">
-                            <label for="ngay_khao_sat">Ngày khảo sát</label>
-                            <input type="date" id="ngay_khao_sat" name="quan_ly_ho_so.ngay_khao_sat">
+                            <label for="ngay_khao_sat">Ngày khảo sát <span class="required">*</span></label>
+                            <input type="date" id="ngay_khao_sat" name="quan_ly_ho_so.ngay_khao_sat" required>
                         </div>
                         <div class="input-group">
-                            <label for="nguoi_khao_sat">Người khảo sát</label>
-                            <select id="nguoi_khao_sat" name="quan_ly_ho_so.nguoi_khao_sat"
+                            <label for="nguoi_khao_sat">Người khảo sát <span class="required">*</span></label>
+                            <select id="nguoi_khao_sat" name="quan_ly_ho_so.nguoi_khao_sat" required
                                 style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
                                 <option value="">-- Chọn người khảo sát --</option>
                                 <option value="Ngô Tuấn Ngọc">Ngô Tuấn Ngọc</option>
@@ -121,12 +130,12 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="han_viet_ho_so">Hạn viết hồ sơ</label>
-                            <input type="date" id="han_viet_ho_so" name="quan_ly_ho_so.han_viet_ho_so">
+                            <label for="han_viet_ho_so">Hạn viết hồ sơ <span class="required">*</span></label>
+                            <input type="date" id="han_viet_ho_so" name="quan_ly_ho_so.han_viet_ho_so" required>
                         </div>
                         <div class="input-group">
-                            <label for="vnpt_khu_vuc">VNPT Khu Vực</label>
-                            <select id="vnpt_khu_vuc" name="quan_ly_ho_so.vnpt_khu_vuc"
+                            <label for="vnpt_khu_vuc">VNPT Khu Vực <span class="required">*</span></label>
+                            <select id="vnpt_khu_vuc" name="quan_ly_ho_so.vnpt_khu_vuc" required
                                 style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
                                 <option value="">-- Chọn VNPT Khu Vực --</option>
                                 <option value="Việt Trì">Việt Trì</option>
@@ -145,6 +154,7 @@
                             <select id="tinh_trang" name="quan_ly_ho_so.tinh_trang"
                                 style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: #F9FAFB;">
                                 <option value="Mới khảo sát chưa phân công">Mới khảo sát chưa phân công</option>
+                                <option value="Đã tiếp xúc chờ khách hàng phản hồi">Đã tiếp xúc chờ khách hàng phản hồi</option>
                                 <option value="Đã phân công">Đã phân công</option>
                                 <option value="Đang viết hồ sơ">Đang viết hồ sơ</option>
                                 <option value="Hồ sơ thiếu thông tin không viết được">Hồ sơ thiếu thông tin không viết được</option>

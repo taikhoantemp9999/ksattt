@@ -202,16 +202,46 @@ function filterAndShow(title, filterFn) {
         listHtml += '<div class="empty-state">Không có hồ sơ nào.</div>';
     } else {
         filtered.sort((a,b) => new Date(b.thoi_gian_nhap) - new Date(a.thoi_gian_nhap)).forEach(item => {
-            const status = item.quan_ly_ho_so?.tinh_trang || "Mới khảo sát chưa phân công";
+            const ql = item.quan_ly_ho_so || {};
+            const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
+            const isNear = isDeadlineNear(ql.han_viet_ho_so);
+
+            // Role-based link: Editor/Admin -> Edit page, Viewer -> Detail page
+            const targetUrl = (auth.role === 'editor' || auth.role === 'admin') 
+                ? `index.html?editId=${item.id}` 
+                : `detail.html?id=${item.id}`;
+
             listHtml += `
-                <a href="detail.html?id=${item.id}" target="_blank" class="modal-item">
-                    <div>
-                        <div class="name">${item.don_vi_khao_sat}</div>
-                        <div class="sub">
-                            ${status} | KS: ${item.quan_ly_ho_so?.ngay_khao_sat || 'N/A'}
+                <a href="${targetUrl}" target="_blank" class="modal-item" style="display: block; padding: 12px; margin-bottom: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; text-decoration: none; transition: all 0.2s;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 12px; align-items: start;">
+                        <!-- Column 1: Client & Surveyor -->
+                        <div style="min-width: 0;">
+                            <div style="font-weight: 900; color: #0f172a; font-size: 0.95rem; margin-bottom: 4px; line-height: 1.2;">${item.don_vi_khao_sat}</div>
+                            <div style="font-size: 0.75rem; color: #64748b;">
+                                <i class="fas fa-user-edit" style="width: 14px;"></i> ${ql.nguoi_khao_sat || 'N/A'}
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Dates -->
+                        <div style="font-size: 0.75rem; color: #475569; display: flex; flex-direction: column; gap: 4px;">
+                            <div>
+                                <i class="fas fa-calendar-day" style="width: 14px; color: #94a3b8;"></i> KS: ${ql.ngay_khao_sat || 'N/A'}
+                            </div>
+                            <div style="${isNear ? 'color: #ef4444; font-weight: bold;' : ''}">
+                                <i class="fas fa-clock" style="width: 14px; ${isNear ? 'color: #ef4444;' : 'color: #94a3b8;'}"></i> Hạn: ${ql.han_viet_ho_so || 'N/A'}
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Status & Profile Writer -->
+                        <div style="text-align: right; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+                            <span class="status-badge-small" style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; border: 1px solid #bae6fd;">
+                                ${status}
+                            </span>
+                            <div style="font-size: 0.7rem; font-weight: 600; color: #64748b;">
+                                 ${ql.nguoi_viet_ho_so || 'Chưa phân công'}
+                            </div>
                         </div>
                     </div>
-                    <i class="fas fa-chevron-right" style="color: #cbd5e1;"></i>
                 </a>
             `;
         });

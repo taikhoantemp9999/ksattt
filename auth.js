@@ -8,25 +8,25 @@ const AUTH_KEYS = {
 };
 
 function authGet() {
-    const user = sessionStorage.getItem(AUTH_KEYS.user);
-    const role = sessionStorage.getItem(AUTH_KEYS.role);
-    const at = sessionStorage.getItem(AUTH_KEYS.at);
+    const user = localStorage.getItem(AUTH_KEYS.user);
+    const role = localStorage.getItem(AUTH_KEYS.role);
+    const at = localStorage.getItem(AUTH_KEYS.at);
     if (!user || !role) return null;
     return { user, role, at };
 }
 
 function authSet(username, role) {
-    sessionStorage.setItem(AUTH_KEYS.user, username);
-    sessionStorage.setItem(AUTH_KEYS.role, role);
-    sessionStorage.setItem(AUTH_KEYS.at, String(Date.now()));
+    localStorage.setItem(AUTH_KEYS.user, username);
+    localStorage.setItem(AUTH_KEYS.role, role);
+    localStorage.setItem(AUTH_KEYS.at, String(Date.now()));
     return { ok: true, role: role, user: username };
 }
 
 function authLogout() {
-    sessionStorage.removeItem(AUTH_KEYS.user);
-    sessionStorage.removeItem(AUTH_KEYS.role);
-    sessionStorage.removeItem(AUTH_KEYS.at);
-    sessionStorage.removeItem("EDIT_PASS_OK"); // legacy
+    localStorage.removeItem(AUTH_KEYS.user);
+    localStorage.removeItem(AUTH_KEYS.role);
+    localStorage.removeItem(AUTH_KEYS.at);
+    localStorage.removeItem("EDIT_PASS_OK"); // legacy
     window.location.href = "login.html";
 }
 
@@ -35,7 +35,8 @@ function requireAuth(options = {}) {
     const { allowRoles = null, redirectTo = "login.html" } = options;
 
     if (!auth) {
-        window.location.href = redirectTo;
+        const currentUrl = encodeURIComponent(window.location.href);
+        window.location.href = `${redirectTo}?redirect=${currentUrl}`;
         return null;
     }
     if (Array.isArray(allowRoles) && allowRoles.length > 0 && !allowRoles.includes(auth.role)) {

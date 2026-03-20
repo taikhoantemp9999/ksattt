@@ -1,8 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Nếu đã có local session thì về list.html
+    // Nếu đã có local session thì về list.html hoặc trang redirect
     const existing = authGet();
     if (existing) {
-        window.location.href = 'list.html';
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect');
+        if (redirectUrl) {
+            window.location.href = decodeURIComponent(redirectUrl);
+        } else {
+            window.location.href = 'list.html';
+        }
         return;
     }
 
@@ -65,7 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (snapshot.exists() && snapshot.val().password === p) {
                 const record = snapshot.val();
                 authSet(u, record.role);
-                window.location.href = 'list.html';
+                
+                // Check for redirect parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectUrl = urlParams.get('redirect');
+                if (redirectUrl) {
+                    window.location.href = decodeURIComponent(redirectUrl);
+                } else {
+                    window.location.href = 'list.html';
+                }
             } else {
                 showError('Sai tài khoản hoặc mật khẩu.');
                 btn.disabled = false;

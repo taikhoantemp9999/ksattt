@@ -118,6 +118,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const btnBackToListGlobal = document.getElementById('btnBackToListGlobal');
+    if (btnBackToListGlobal) {
+        btnBackToListGlobal.addEventListener('click', () => {
+            window.location.href = 'list.html';
+        });
+    }
+
     // Nút Quản lý hệ thống TT
     document.getElementById('btnManageHttt').addEventListener('click', openManageHtttModal);
     document.getElementById('btnCloseHtttModal').addEventListener('click', closeManageHtttModal);
@@ -175,10 +182,18 @@ document.addEventListener('DOMContentLoaded', () => {
         imageInput.addEventListener('change', handleImageSelection);
     }
 
-    // Set default value for ngay_khao_sat
+    // Set default value for ngay_khao_sat and han_viet_ho_so
     const ngayKhaoSatInput = document.getElementById('ngay_khao_sat');
+    const hanVietHoSoInput = document.getElementById('han_viet_ho_so');
+    
     if (ngayKhaoSatInput && !ngayKhaoSatInput.value) {
         ngayKhaoSatInput.value = new Date().toISOString().split('T')[0];
+    }
+    if (hanVietHoSoInput && !hanVietHoSoInput.value) {
+        // Default deadline is +1 day from now
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        hanVietHoSoInput.value = tomorrow.toISOString().split('T')[0];
     }
 });
 
