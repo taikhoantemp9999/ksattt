@@ -46,7 +46,7 @@ function renderDetail(data) {
     document.getElementById('surveyTime').innerText = `Nhập lúc: ${new Date(data.thoi_gian_nhap).toLocaleString('vi-VN')}`;
 
     const container = document.getElementById('detailContent');
-    
+
     let html = `
         <div class="section-header">I. THÔNG TIN CHUNG</div>
         <div class="detail-card">
@@ -235,14 +235,14 @@ function renderDetail(data) {
             ${(data.hinh_anh_hien_truong && data.hinh_anh_hien_truong.length > 0) ? `
                 <div class="image-grid">
                     ${data.hinh_anh_hien_truong.map(img => {
-                        let displayUrl = img.url;
-                        if (displayUrl.includes('drive.google.com')) {
-                            const fileIdMatch = displayUrl.match(/[-\w]{25,}/);
-                            if (fileIdMatch) {
-                                displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
-                            }
-                        }
-                        return `
+        let displayUrl = img.url;
+        if (displayUrl.includes('drive.google.com')) {
+            const fileIdMatch = displayUrl.match(/[-\w]{25,}/);
+            if (fileIdMatch) {
+                displayUrl = `https://lh3.googleusercontent.com/d/${fileIdMatch[0]}`;
+            }
+        }
+        return `
                             <div class="image-item" style="cursor: pointer;" onclick="openLightbox('${displayUrl}')">
                                 <div class="image-preview-wrapper" style="aspect-ratio: 1/1; height: auto;">
                                     <img src="${displayUrl}" alt="Field Photo" style="width:100%; height:100%; object-fit:cover;">
@@ -250,7 +250,7 @@ function renderDetail(data) {
                                 <div style="font-size: 0.75rem; color: #475569; margin-top: 4px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${img.caption || '...'}</div>
                             </div>
                         `;
-                    }).join('')}
+    }).join('')}
                 </div>
             ` : '<div class="empty-state">Không có hình ảnh hiện trường được tải lên.</div>'}
         </div>
@@ -425,12 +425,12 @@ function renderBuildingsDetailed(buildingsArray) {
                         <div style="margin-bottom: 16px;">
                             <div class="image-grid-compact" style="margin-bottom: 12px;">
                                 ${bldg.photos.map(p => {
-                                    let dUrl = p.url;
-                                    if (dUrl.includes('drive.google.com')) {
-                                        const idMatch = dUrl.match(/[-\w]{25,}/);
-                                        if (idMatch) dUrl = `https://lh3.googleusercontent.com/d/${idMatch[0]}`;
-                                    }
-                                    return `
+            let dUrl = p.url;
+            if (dUrl.includes('drive.google.com')) {
+                const idMatch = dUrl.match(/[-\w]{25,}/);
+                if (idMatch) dUrl = `https://lh3.googleusercontent.com/d/${idMatch[0]}`;
+            }
+            return `
                                         <div class="image-item" style="cursor: pointer;" onclick="openLightbox('${dUrl}')">
                                             <div class="image-preview-wrapper" style="aspect-ratio: 1/1; height: 50px;">
                                                 <img src="${dUrl}" alt="Building" style="width:100%; height:100%; object-fit:cover;">
@@ -438,7 +438,7 @@ function renderBuildingsDetailed(buildingsArray) {
                                             <div style="font-size: 0.65rem; color: #64748b; margin-top: 4px; border-top: 1px solid #f1f5f9; padding-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.caption || '...'}</div>
                                         </div>
                                     `;
-                                }).join('')}
+        }).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -508,11 +508,11 @@ function renderBuildingsDetailed(buildingsArray) {
                     const noteText = (node.notes && String(node.notes).trim() !== '') ? `\n📝 ${String(node.notes).trim()}` : '';
                     const rightText = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `\n🏢 DS Phòng: ${String(node.rightRooms).replace(/\n/g, ', ')}` : '';
                     const tooltip = `${safeStr(node.name)}${noteText}${rightText}`.trim();
-                    
+
                     let noteHtml = '';
                     const noteContent = (node.notes && String(node.notes).trim() !== '') ? `<div style="margin-bottom: 2px;">📝 ${String(node.notes).trim().replace(/\n/g, '<br>')}</div>` : '';
                     const rightRoomsContent = (node.rightRooms && String(node.rightRooms).trim() !== '') ? `<div>🏢 ${String(node.rightRooms).trim().replace(/\n/g, '<br>')}</div>` : '';
-                    
+
                     if (noteContent || rightRoomsContent) {
                         noteHtml = `<div style="font-size: 0.75rem; color: #64748b; margin-top: 8px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px; line-height: 1.3; word-break: break-word; text-align: left; width: 100%;">
                             ${noteContent}
@@ -558,11 +558,11 @@ function renderBuildingsDetailed(buildingsArray) {
             const aMain = isMainDevice(a) ? 1 : 0;
             const bMain = isMainDevice(b) ? 1 : 0;
             if (aMain !== bMain) return bMain - aMain; // 1 trước 0
-            
+
             const aName = (a.name || '').toLowerCase();
             const bName = (b.name || '').toLowerCase();
             if (aName !== bName) return aName.localeCompare(bName);
-            
+
             const aModel = (a.model || '').toLowerCase();
             const bModel = (b.model || '').toLowerCase();
             return aModel.localeCompare(bModel);
@@ -587,7 +587,7 @@ function renderBuildingsDetailed(buildingsArray) {
                 const mainLabel = isMainDevice(eq) ? `<span class="tag tag-main">🌟 Mạch chính</span>` : '';
                 const networkZone = (eq.isp && String(eq.isp).trim() !== '') ? 'Vùng mạng biên' : 'Vùng mạng nội bộ';
                 const nameModel = `${safeStr(eq.name)}${eq.model ? ` (${safeStr(eq.model)})` : ''}`;
-                
+
                 buildingsHtml += `
                             <tr>
                                 <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
@@ -619,7 +619,7 @@ function renderBuildingsDetailed(buildingsArray) {
 }
 
 // Global functions for lightbox
-window.openLightbox = function(url) {
+window.openLightbox = function (url) {
     const lightbox = document.getElementById('imageLightbox');
     const img = document.getElementById('lightboxImg');
     if (lightbox && img) {
@@ -629,7 +629,7 @@ window.openLightbox = function(url) {
     }
 };
 
-window.closeLightbox = function() {
+window.closeLightbox = function () {
     const lightbox = document.getElementById('imageLightbox');
     if (lightbox) {
         lightbox.classList.remove('active');
@@ -748,13 +748,12 @@ function renderStatusUpdateUI(data) {
             "Hồ sơ thiếu thông tin không viết được",
             "Đã tiếp xúc chờ khách hàng phản hồi"
         ];
-        
+
         if (viewerAllowedFrom.includes(currentStatus)) {
             allowedOptions = [
-                "Mới khảo sát chưa phân công",
-                "Đã phân công",
                 "Đang viết hồ sơ",
-                "Hồ sơ thiếu thông tin không viết được"
+                "Hồ sơ thiếu thông tin không viết được",
+                "Đã gửi cho quản lý địa bàn"
             ];
         } else {
             return ''; // Viewer cannot update if not in allowed statuses
@@ -766,7 +765,7 @@ function renderStatusUpdateUI(data) {
     if (allowedOptions.length === 0) return '';
 
     const id = new URLSearchParams(window.location.search).get('id');
-    
+
     return `
         <select id="selectStatusUpdate" style="padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
             <option value="">-- Cập nhật trạng thái --</option>
@@ -779,7 +778,7 @@ function renderStatusUpdateUI(data) {
     `;
 }
 
-window.updateSurveyStatus = function(id) {
+window.updateSurveyStatus = function (id) {
     const select = document.getElementById('selectStatusUpdate');
     const newStatus = select.value;
     if (!newStatus) {
@@ -801,9 +800,9 @@ window.updateSurveyStatus = function(id) {
     });
 };
 
-window.updateWritingNotes = function(id) {
+window.updateWritingNotes = function (id) {
     const newNote = document.getElementById('noteUpdateTextArea').value;
-    
+
     database.ref('surveys_ATTT').child(id).update({
         "quan_ly_ho_so/ghi_chu_viet_ho_so": newNote,
         "nguoi_cap_nhat_ghi_chu": authGet().user,
