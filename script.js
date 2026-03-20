@@ -33,8 +33,8 @@ const surveysRef = database.ref('surveys_ATTT');
 
 // ===== Simple login guard (role-based) =====
 const auth = (typeof requireAuth === 'function') ? requireAuth({ redirectTo: 'login.html' }) : null;
-if (auth && auth.role !== 'editor' && auth.role !== 'admin') {
-    // Viewer should not use index page for add/edit
+// Allow Viewer to stay on index.html if they are editing (to update notes)
+if (auth && auth.role !== 'editor' && auth.role !== 'admin' && !(preloadEditId)) {
     window.location.href = 'list.html';
 }
 
@@ -745,7 +745,11 @@ function handleFormSubmit(e) {
 
 // Tính năng Load dữ liệu vào form để sửa
 function loadSurveyToForm(id) {
-    if (!auth || auth.role !== 'editor' && auth.role !== 'admin') {
+    if (!auth) return;
+    const isViewer = (auth.role === 'viewer');
+    
+    // Viewer can only load for editing, not for general access if guard didn't block
+    if (isViewer && !id) {
         showToast("Tài khoản hiện tại chỉ có quyền xem.", "error");
         return;
     }
@@ -854,6 +858,24 @@ function loadSurveyToForm(id) {
 
     // Preview sơ đồ ngay trong index (read-only, group từng tòa nhà)
     renderBuildingsPreview(survey.buildingsArray, survey.id, survey.don_vi_khao_sat);
+
+    // Nếu là Viewer, vô hiệu hóa các field khác ngoài ghi chú viết hồ sơ
+    if (auth.role === 'viewer') {
+        const form = document.getElementById('surveyForm');
+        Array.from(form.elements).forEach(el => {
+            if (el.id !== 'ghi_chu_viet_ho_so' && el.id !== 'editId') {
+                el.disabled = true;
+            }
+        });
+        // Ẩn các nút thêm tòa nhà
+        const bldgWrapper = document.getElementById('buildingSurveyWrapper');
+        if (bldgWrapper) bldgWrapper.style.display = 'none';
+        
+        // Thay đổi label nút submit cho rõ ràng
+        const btnSubmit = document.getElementById('btnSubmit');
+        const submitText = document.getElementById('submitText');
+        if (submitText) submitText.innerText = 'Chỉ cập nhật ghi chú';
+    }
     buildingPreviewVisible = false; // mặc định ẩn, bấm "Xem nhanh" mới hiện
     updateBuildingPreviewVisibility();
 
