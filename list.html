@@ -126,15 +126,36 @@
             <div id="editorActions" class="list-actions">
                 <button id="btnAddNew" class="primary-small" type="button" style="display:none;">+ Thêm mới khảo sát</button>
                 <a href="thongke.html" id="btnStats" class="primary-small" style="background:#0369a1; text-decoration:none; display:inline-flex; align-items:center; gap:8px;">📊 Thống kê</a>
+                <button id="btnManageMaterials" class="primary-small" style="background:#0284c7; display:none;"
+                    type="button">Quản trị Danh mục</button>
                 <button id="btnManageUsers" class="primary-small" style="background:#0f172a; display:none;"
                     type="button">Quản trị Tài khoản</button>
             </div>
 
-            <!-- Thanh tìm kiếm -->
-            <div class="search-container" style="margin-bottom: 20px;">
+            <!-- Thanh tìm kiếm và Lọc -->
+            <div class="search-container search-filter-container" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <input type="text" id="searchInput" placeholder="🔍 Tìm theo tên đơn vị/xã..." 
-                    style="width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); outline: none; transition: all 0.2s; background: #fff;">
+                    style="flex: 1; min-width: 200px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); outline: none; transition: all 0.2s; background: #fff;">
+                <select id="vnptFilter" style="padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); outline: none; background: #fff; min-width: 150px; cursor: pointer; color: #334155;">
+                    <option value="">Tất cả VNPT</option>
+                </select>
+                <select id="writerFilter" style="padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); outline: none; background: #fff; min-width: 160px; cursor: pointer; color: #334155;">
+                    <option value="">Tất cả Người viết</option>
+                </select>
+                <select id="statusFilter" style="padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); outline: none; background: #fff; min-width: 220px; cursor: pointer; color: #334155;">
+                    <option value="">Tất cả Trạng thái</option>
+                    <optgroup label="Nhóm tùy chỉnh">
+                        <option value="group_overdue">Sắp hết hạn / Quá hạn</option>
+                        <option value="group_pending">Đang viết</option>
+                        <option value="group_completed">Đã xong</option>
+                        <option value="group_missing">Thiếu thông tin</option>
+                    </optgroup>
+                    <optgroup label="Trạng thái cụ thể" id="specificStatusGroup">
+                    </optgroup>
+                </select>
             </div>
+
+            <div id="listSummary" style="margin-bottom: 16px; font-size: 0.95rem; color: #475569; font-weight: 500; display: none; align-items: center; justify-content: space-between;"></div>
 
             <div id="listContainer">
                 <div class="empty-state">Đang tải dữ liệu...</div>

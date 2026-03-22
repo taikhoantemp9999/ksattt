@@ -68,6 +68,18 @@ let uploadedImages = []; // Mảng chứa { url: '', caption: '' }
 
 let buildingPreviewVisible = false;
 
+let danhMucVatTuList = [];
+database.ref('danh_muc_vat_tu').on('value', snap => {
+    danhMucVatTuList = [];
+    snap.forEach(c => {
+        danhMucVatTuList.push({ id: c.key, ...c.val() });
+    });
+    // Re-render bảng dự toán nếu đang có dữ liệu để update danh sách dropdown (tùy chọn)
+    if (typeof renderEstimateTable === 'function') renderEstimateTable();
+});
+
+let estimateItems = []; // Lưu trữ dự toán
+
 // Lắng nghe dữ liệu realtime từ Firebase
 surveysRef.on('value', (snapshot) => {
     localSurveys = [];
@@ -114,6 +126,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnExport = document.getElementById('btnExport');
     if (btnExport) btnExport.addEventListener('click', exportToExcel);
+    
+    const btnExportWord = document.getElementById('btnExportWord');
+    if (btnExportWord) btnExportWord.addEventListener('click', exportToWord);
+
+    const btnAddEstimate = document.getElementById('btnAddEstimate');
+    if (btnAddEstimate) {
+        btnAddEstimate.addEventListener('click', () => {
+            estimateItems.push({ ten: '', sl: 1, don_gia: 0 });
+            renderEstimateTable();
+        });
+    }
 });
 
 function renderWriterSelect() {
@@ -712,6 +735,7 @@ function getFormData() {
             }
         },
         hinh_anh_hien_truong: uploadedImages,
+        du_toan_thiet_bi: estimateItems,
         quan_ly_ho_so: {
             ngay_khao_sat: formData.get('quan_ly_ho_so.ngay_khao_sat') || "",
             nguoi_khao_sat: formData.get('quan_ly_ho_so.nguoi_khao_sat') || "",
@@ -910,6 +934,10 @@ function loadSurveyToForm(id) {
     uploadedImages = Array.isArray(survey.hinh_anh_hien_truong) ? survey.hinh_anh_hien_truong : [];
     renderUploadedImages();
 
+    // Dự toán
+    estimateItems = Array.isArray(survey.du_toan_thiet_bi) ? [...survey.du_toan_thiet_bi] : [];
+    renderEstimateTable();
+
     // Bật hiệu ứng chế độ sửa
     document.getElementById('editAlert').style.display = 'flex';
     document.getElementById('editingName').innerText = survey.don_vi_khao_sat;
@@ -987,6 +1015,9 @@ function cancelEdit() {
     // Xóa ảnh
     uploadedImages = [];
     renderUploadedImages();
+    
+    estimateItems = [];
+    renderEstimateTable();
 
     const btnSubmit = document.getElementById('btnSubmit');
     btnSubmit.classList.remove('edit-mode');
@@ -1303,4 +1334,114 @@ function addNewHttt() {
 function saveDynamicHtttList(newlyAddedItem = null) {
     localStorage.setItem('CUSTOM_HTTT_MANAGER', JSON.stringify(dynamicHtttList));
     renderHtttCheckboxes(false, newlyAddedItem); // Render lại form chính, nhưng giữ nguyên các ô đang check, + tick ô mới
+}
+
+// ==========================
+// DỰ TOÁN & XUẤT WORD
+// ==========================
+function renderEstimateTable() {
+    const estimateTableBody = document.getElementById('estimateTableBody');
+    const estimateTotalAmount = document.getElementById('estimateTotalAmount');
+    if (!estimateTableBody) return;
+    
+    estimateTableBody.innerHTML = '';
+    let total = 0;
+
+    if (estimateItems.length === 0) {
+        estimateTableBody.innerHTML = '<tr id="emptyEstimateRow"><td colspan="5" style="text-align:center; padding: 16px; color:#94a3b8; font-size:0.9rem;">Chưa có thiết bị nào.</td></tr>';
+    }
+
+    estimateItems.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = "1px solid #f1f5f9";
+        
+        let optionsHtml = '<option value="">-- Chọn vật tư --</option>';
+        let found = danhMucVatTuList.find(d => d.ten_vat_tu === item.ten);
+        if (!found && item.ten) {
+            optionsHtml += `<option value="${item.ten.replace(/"/g, '&quot;')}" selected>${item.ten}</option>`;
+        }
+        
+        danhMucVatTuList.forEach(d => {
+            const selected = (d.ten_vat_tu === item.ten) ? "selected" : "";
+            optionsHtml += `<option value="${d.ten_vat_tu.replace(/"/g, '&quot;')}" data-price="${d.don_gia}" ${selected}>${d.ten_vat_tu}</option>`;
+        });
+
+        const thanhTien = item.sl * item.don_gia;
+        total += thanhTien;
+
+        tr.innerHTML = `
+            <td style="padding: 8px;">
+                <select style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.9rem;" onchange="updateEstItem(${index}, 'ten', this)">
+                    ${optionsHtml}
+                </select>
+            </td>
+            <td style="padding: 8px;">
+                <input type="number" min="1" value="${item.sl}" style="width:100%; text-align:center; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.9rem;" onchange="updateEstItem(${index}, 'sl', this.value)">
+            </td>
+            <td style="padding: 8px;">
+                <input type="number" min="0" value="${item.don_gia}" style="width:100%; text-align:right; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.9rem;" onchange="updateEstItem(${index}, 'don_gia', this.value)">
+            </td>
+            <td style="padding: 8px; text-align:right; font-weight:600; color:#334155;">
+                ${thanhTien.toLocaleString('vi-VN')}
+            </td>
+            <td style="padding: 8px; text-align:center;">
+                <button type="button" onclick="removeEstItem(${index})" style="background:transparent; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;" title="Xóa">&times;</button>
+            </td>
+        `;
+        estimateTableBody.appendChild(tr);
+    });
+
+    if (estimateTotalAmount) estimateTotalAmount.innerText = total.toLocaleString('vi-VN');
+}
+
+window.updateEstItem = function(index, field, valueOrEl) {
+    if (field === 'ten') {
+        const opt = valueOrEl.options[valueOrEl.selectedIndex];
+        estimateItems[index].ten = valueOrEl.value;
+        if (opt && opt.dataset.price) {
+            estimateItems[index].don_gia = parseInt(opt.dataset.price);
+        }
+    } else if (field === 'sl') {
+        estimateItems[index].sl = parseInt(valueOrEl) || 1;
+    } else if (field === 'don_gia') {
+        estimateItems[index].don_gia = parseInt(valueOrEl) || 0;
+    }
+    renderEstimateTable();
+};
+
+window.removeEstItem = function(index) {
+    estimateItems.splice(index, 1);
+    renderEstimateTable();
+};
+
+function exportToWord() {
+    const unitName = document.getElementsByName('don_vi_khao_sat')[0]?.value || 'Khach_Hang';
+    const cleanName = unitName.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
+    
+    const style = "<style>table { border-collapse: collapse; width: 100%; margin-top: 10px; } th, td { border: 1px solid black; padding: 8px; text-align: left; } th { border-bottom: 2px solid black; background: #f0f0f0; }</style>";
+    
+    const deXuatContent = document.getElementById('de_xuat_textarea').value.replace(/\\n/g, '<br>');
+    
+    let tableHtml = "";
+    if (estimateItems.length > 0) {
+        let total = 0;
+        let rows = "";
+        estimateItems.forEach((item, idx) => {
+            const tt = item.sl * item.don_gia;
+            total += tt;
+            rows += "<tr><td style='text-align:center;'>" + (idx + 1) + "</td><td>" + item.ten + "</td><td style='text-align:center;'>" + item.sl + "</td><td style='text-align:right;'>" + item.don_gia.toLocaleString('vi-VN') + "</td><td style='text-align:right;'>" + tt.toLocaleString('vi-VN') + "</td></tr>";
+        });
+        tableHtml = "<h3>Dự toán vật tư / thiết bị đề xuất</h3><table><tr><th>STT</th><th>Thiết bị / Vật tư</th><th>Số lượng</th><th>Đơn giá (VNĐ)</th><th>Thành tiền (VNĐ)</th></tr>" + rows + "<tr><td colspan='4' style='text-align:right; font-weight:bold;'>Tổng cộng:</td><td style='text-align:right; font-weight:bold; color:red;'>" + total.toLocaleString('vi-VN') + "</td></tr></table>";
+    }
+
+    const htmlContent = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'>" + style + "</head><body><h2>Phần V. Đề xuất giải pháp / Ghi chú</h2><p><strong>Khách hàng: </strong>" + unitName + "</p><h3>Chi tiết Đề xuất:</h3><p>" + deXuatContent + "</p>" + tableHtml + "</body></html>";
+
+    const blob = new Blob(['\\ufeff', htmlContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "DeXuat_" + cleanName + ".doc";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }

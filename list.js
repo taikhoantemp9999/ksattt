@@ -51,6 +51,14 @@ if (isAdmin) {
             window.location.href = 'tk.html';
         });
     }
+    
+    const btnManageMaterials = document.getElementById('btnManageMaterials');
+    if (btnManageMaterials) {
+        btnManageMaterials.style.display = 'inline-flex';
+        btnManageMaterials.addEventListener('click', () => {
+            window.location.href = 'danhmucvattu.html';
+        });
+    }
 }
 
 // Ensure editorActions container itself is visible if it contains something visible
@@ -194,32 +202,142 @@ function renderList(items) {
     });
 }
 
+const EXCLUDED_OVERDUE_STATUSES = [
+    "Đã gửi lại hồ sơ cho VNPT Khu Vực",
+    "Đã gửi cho CA",
+    "Công an đã phê duyệt"
+];
+
+const COMPLETED_STATUSES = [
+    "Đã gửi cho quản lý địa bàn",
+    "Đã gửi lại hồ sơ cho VNPT Khu Vực",
+    "Đã gửi cho CA",
+    "Công an đã phê duyệt",
+    "Công an trả lại"
+];
+
+const vnptFilter = document.getElementById('vnptFilter');
+const writerFilter = document.getElementById('writerFilter');
+const statusFilter = document.getElementById('statusFilter');
+const specificStatusGroup = document.getElementById('specificStatusGroup');
+
+function applyFilters() {
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const vnptSelected = vnptFilter ? vnptFilter.value : '';
+    const writerSelected = writerFilter ? writerFilter.value : '';
+    const statusSelected = statusFilter ? statusFilter.value : '';
+
+    const filtered = allSurveys.filter(s => {
+        const ql = s.quan_ly_ho_so || {};
+        
+        // Filter by Search Input (Name)
+        const name = (s.don_vi_khao_sat || "").toLowerCase();
+        if (query && !name.includes(query)) return false;
+
+        // Filter by VNPT
+        const region = ql.vnpt_khu_vuc || "Chưa xác định";
+        if (vnptSelected) {
+            if (vnptSelected === 'Khối UBND/ĐU') {
+                if (region === 'Sở Ban Ngành' || region === 'Y tế') return false;
+            } else {
+                if (region !== vnptSelected) return false;
+            }
+        }
+
+        // Filter by Writer
+        const writer = ql.nguoi_viet_ho_so || "Chưa phân công";
+        if (writerSelected && writer !== writerSelected) return false;
+
+        // Filter by Status
+        const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
+        
+        if (statusSelected) {
+            if (statusSelected === 'group_overdue') {
+                const isNear = isDeadlineNear(ql.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(status);
+                if (!isNear) return false;
+            } else if (statusSelected === 'group_pending') {
+                const isPending = !COMPLETED_STATUSES.includes(status) && status !== 'Hồ sơ thiếu thông tin không viết được';
+                if (!isPending) return false;
+            } else if (statusSelected === 'group_completed') {
+                const isCompleted = COMPLETED_STATUSES.includes(status);
+                if (!isCompleted) return false;
+            } else if (statusSelected === 'group_missing') {
+                const isMissing = status === 'Hồ sơ thiếu thông tin không viết được';
+                if (!isMissing) return false;
+            } else {
+                // Specific Status
+                if (status !== statusSelected) return false;
+            }
+        }
+
+        return true;
+    });
+
+    const summaryEl = document.getElementById('listSummary');
+    if (summaryEl) {
+        summaryEl.style.display = 'flex';
+        summaryEl.innerHTML = `<div>Đang hiển thị: <span style="font-weight: 800; color: #0f172a; font-size: 1.1rem;">${filtered.length}</span> / ${allSurveys.length} khách hàng</div>`;
+    }
+
+    renderList(filtered);
+}
+
 surveysRef.on('value', (snapshot) => {
     allSurveys = [];
+    const uniqueVNPT = new Set();
+    const uniqueWriters = new Set();
+    const uniqueStatuses = new Set();
+    
     snapshot.forEach((child) => {
         const data = child.val() || {};
         data.id = child.key;
         allSurveys.push(data);
+        
+        const ql = data.quan_ly_ho_so || {};
+        if (ql.vnpt_khu_vuc) uniqueVNPT.add(ql.vnpt_khu_vuc);
+        const writer = ql.nguoi_viet_ho_so || "Chưa phân công";
+        uniqueWriters.add(writer);
+        const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
+        uniqueStatuses.add(status);
     });
-    // Trình bày ban đầu (không lọc)
-    renderList(allSurveys);
+
+    // Populate VNPT filter
+    if (vnptFilter) {
+        const currentSelected = vnptFilter.value;
+        vnptFilter.innerHTML = '<option value="">Tất cả VNPT</option>';
+        vnptFilter.innerHTML += '<option value="Khối UBND/ĐU">Khối UBND/ĐU</option>';
+        Array.from(uniqueVNPT).sort().forEach(vnpt => {
+            if (vnpt === 'Chưa xác định' || vnpt === 'Khối UBND/ĐU') return;
+            vnptFilter.innerHTML += `<option value="${vnpt}">${vnpt}</option>`;
+        });
+        vnptFilter.value = currentSelected;
+    }
+
+    // Populate Writer filter
+    if (writerFilter) {
+        const currentSelected = writerFilter.value;
+        writerFilter.innerHTML = '<option value="">Tất cả Người viết</option>';
+        Array.from(uniqueWriters).sort().forEach(w => {
+            writerFilter.innerHTML += `<option value="${w}">${w}</option>`;
+        });
+        writerFilter.value = currentSelected;
+    }
+
+    // Populate Specific Statuses filter
+    if (specificStatusGroup) {
+        specificStatusGroup.innerHTML = '';
+        Array.from(uniqueStatuses).sort().forEach(status => {
+            specificStatusGroup.innerHTML += `<option value="${status}">${status}</option>`;
+        });
+    }
+
+    // Apply filters instead of raw renderList
+    applyFilters();
 });
 
-// Logic tìm kiếm
-if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        if (!query) {
-            renderList(allSurveys);
-            return;
-        }
-
-        const filtered = allSurveys.filter(s => {
-            const name = (s.don_vi_khao_sat || "").toLowerCase();
-            return name.includes(query);
-        });
-
-        renderList(filtered);
-    });
-}
+// Listeners
+if (searchInput) searchInput.addEventListener('input', applyFilters);
+if (vnptFilter) vnptFilter.addEventListener('change', applyFilters);
+if (writerFilter) writerFilter.addEventListener('change', applyFilters);
+if (statusFilter) statusFilter.addEventListener('change', applyFilters);
 

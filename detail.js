@@ -227,7 +227,8 @@ function renderDetail(data) {
 
         <div class="section-header">V. ĐỀ XUẤT / GHI CHÚ</div>
         <div class="detail-card">
-            <div style="white-space: pre-wrap; line-height: 1.6;">${data.de_xuat || "Không có ghi chú."}</div>
+            <div style="white-space: pre-wrap; line-height: 1.6; margin-bottom: 12px;">${data.de_xuat || "Không có ghi chú."}</div>
+            ${renderDetailEstimateTable(data.du_toan_thiet_bi)}
         </div>
 
         <div class="section-header">VI. HÌNH ẢNH HIỆN TRƯỜNG</div>
@@ -789,7 +790,7 @@ window.updateSurveyStatus = function (id) {
     if (!confirm(`Xác nhận chuyển trạng thái sang: ${newStatus}?`)) return;
 
     database.ref('surveys_ATTT').child(id).update({
-        "quan_ly_ho_so/tinh_trang": newStatus,
+            "quan_ly_ho_so/tinh_trang": newStatus,
         "nguoi_cap_nhat_trang_thai": authGet().user,
         "thoi_gian_cap_nhat_trang_thai": new Date().toISOString()
     }).then(() => {
@@ -798,7 +799,55 @@ window.updateSurveyStatus = function (id) {
     }).catch(err => {
         alert("Lỗi khi cập nhật trạng thái: " + err.message);
     });
-};
+}
+
+function renderDetailEstimateTable(estimateItems) {
+    if (!estimateItems || !Array.isArray(estimateItems) || estimateItems.length === 0) return '';
+    
+    let total = 0;
+    let rowsHtml = '';
+    estimateItems.forEach((item, idx) => {
+        const tt = item.sl * item.don_gia;
+        total += tt;
+        rowsHtml += `
+            <tr>
+                <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+                <td style="font-weight: 600; color: #0f172a;">${item.ten || '-'}</td>
+                <td style="text-align: center;">${item.sl || 0}</td>
+                <td style="text-align: right; color: #0369a1;">${(item.don_gia || 0).toLocaleString('vi-VN')}</td>
+                <td style="text-align: right; font-weight: 600; color: #334155;">${tt.toLocaleString('vi-VN')}</td>
+            </tr>
+        `;
+    });
+
+    return `
+        <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 16px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #0f172a;">Dự toán thiết bị đề xuất</h4>
+            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="building-table" style="margin-top: 0; min-width: 500px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;">STT</th>
+                            <th>Thiết bị / Vật tư</th>
+                            <th style="width: 80px; text-align: center;">SL</th>
+                            <th style="width: 120px; text-align: right;">Đơn giá</th>
+                            <th style="width: 140px; text-align: right;">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f1f5f9; border-top: 2px solid #cbd5e1;">
+                            <td colspan="4" style="text-align: right; font-weight: 700; color: #0f172a; padding: 12px;">Tổng cộng:</td>
+                            <td style="text-align: right; font-weight: 800; color: #b91c1c; font-size: 1.05rem; padding: 12px;">${total.toLocaleString('vi-VN')}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    `;
+}
 
 window.updateWritingNotes = function (id) {
     const newNote = document.getElementById('noteUpdateTextArea').value;
