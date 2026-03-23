@@ -13,15 +13,9 @@ const HTTT_LIST = [
     "Kiểm soát thủ tục hành chính"
 ];
 
-const WRITER_LIST = [
-    "Vũ Trường Giang",
-    "Tạ Anh Tuấn",
-    "Nguyễn Quyết Thắng",
-    "Trần Đại Dương",
-    "Ngô Tuấn Ngọc",
-    "Nguyễn Đức Hoàng",
-    "Lê Công Minh"
-];
+// Lấy danh sách từ Firebase thay vì hardcode
+let danhmucNguoiViet = [];
+let danhmucVnpt = [];
 
 const COMPLETED_STATUSES = [
     "Đã gửi cho quản lý địa bàn",
@@ -48,6 +42,34 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const surveysRef = database.ref('surveys_ATTT');
+const vnptRef = database.ref('danh_muc_vnpt');
+const writersRef = database.ref('danh_muc_nguoi_viet');
+
+// Khởi tạo các danh mục nếu trống
+vnptRef.once('value', snap => {
+    if (!snap.exists()) {
+        const defaultVnpt = ["Việt Trì", "Thanh Ba", "Thanh Thủy", "Cẩm Khê", "Thanh Sơn", "Tân Sơn", "Hạ Hòa", "Sở Ban Ngành", "Y tế"];
+        defaultVnpt.forEach(name => vnptRef.push({ ten: name }));
+    }
+});
+writersRef.once('value', snap => {
+    if (!snap.exists()) {
+        const defaultWriters = ["Vũ Trường Giang", "Tạ Anh Tuấn", "Nguyễn Quyết Thắng", "Trần Đại Dương", "Ngô Tuấn Ngọc", "Nguyễn Đức Hoàng", "Lê Công Minh"];
+        defaultWriters.forEach(name => writersRef.push({ ten: name }));
+    }
+});
+
+// Lắng nghe danh mục động
+vnptRef.on('value', snap => {
+    danhmucVnpt = [];
+    snap.forEach(c => { danhmucVnpt.push({ id: c.key, ...c.val() }); });
+    renderVnptSelect();
+});
+writersRef.on('value', snap => {
+    danhmucNguoiViet = [];
+    snap.forEach(c => { danhmucNguoiViet.push({ id: c.key, ...c.val() }); });
+    renderWriterSelect();
+});
 
 // ===== Simple login guard (role-based) =====
 const auth = (typeof requireAuth === 'function') ? requireAuth({ redirectTo: 'login.html' }) : null;
@@ -144,13 +166,10 @@ function renderWriterSelect() {
     const select = document.getElementById('nguoi_viet_ho_so');
     if (!select) return;
 
-    // Lưu lại giá trị hiện tại để không bị mất khi re-render
     const currentValue = select.value;
-
-    // Tính toán thống kê cho mỗi người viết
     const writerStats = {};
-    WRITER_LIST.forEach(name => {
-        writerStats[name] = { pending: 0, missingInfo: 0 };
+    danhmucNguoiViet.forEach(w => {
+        writerStats[w.ten] = { pending: 0, missingInfo: 0 };
     });
 
     localSurveys.forEach(s => {
@@ -168,27 +187,34 @@ function renderWriterSelect() {
         }
     });
 
-    // Sắp xếp danh sách người viết dựa trên số lượng "Đang viết" (pending - missingInfo) tăng dần
-    const sortedWriters = [...WRITER_LIST].sort((a, b) => {
-        const activeA = writerStats[a].pending - writerStats[a].missingInfo;
-        const activeB = writerStats[b].pending - writerStats[b].missingInfo;
+    const sortedWriters = [...danhmucNguoiViet].sort((a, b) => {
+        const activeA = (writerStats[a.ten]?.pending || 0) - (writerStats[a.ten]?.missingInfo || 0);
+        const activeB = (writerStats[b.ten]?.pending || 0) - (writerStats[b.ten]?.missingInfo || 0);
         return activeA - activeB;
     });
 
-    // Render lại options
     let html = '<option value="">-- Chọn người viết hồ sơ --</option>';
-    sortedWriters.forEach(name => {
+    sortedWriters.forEach(w => {
+        const name = w.ten;
         const activeCount = writerStats[name].pending - writerStats[name].missingInfo;
         const missingCount = writerStats[name].missingInfo;
         html += `<option value="${name}">${name} (Đang viết: ${activeCount}, thiếu TT: ${missingCount})</option>`;
     });
 
     select.innerHTML = html;
-    
-    // Khôi phục lại giá trị cũ nếu nó vẫn tồn tại trong list
-    if (currentValue) {
-        select.value = currentValue;
-    }
+    if (currentValue) select.value = currentValue;
+}
+
+function renderVnptSelect() {
+    const select = document.getElementById('vnpt_khu_vuc');
+    if (!select) return;
+    const currentValue = select.value;
+    let html = '<option value="">-- Chọn VNPT Khu Vực --</option>';
+    danhmucVnpt.sort((a,b) => a.ten.localeCompare(b.ten)).forEach(v => {
+        html += `<option value="${v.ten}">${v.ten}</option>`;
+    });
+    select.innerHTML = html;
+    if (currentValue) select.value = currentValue;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -742,6 +768,7 @@ function getFormData() {
             nguoi_khao_sat: formData.get('quan_ly_ho_so.nguoi_khao_sat') || "",
             nguoi_viet_ho_so: formData.get('quan_ly_ho_so.nguoi_viet_ho_so') || "",
             han_viet_ho_so: formData.get('quan_ly_ho_so.han_viet_ho_so') || "",
+            site: formData.get('quan_ly_ho_so.site') || "",
             vnpt_khu_vuc: formData.get('quan_ly_ho_so.vnpt_khu_vuc') || "",
             tinh_trang: formData.get('quan_ly_ho_so.tinh_trang') || "Mới khảo sát chưa phân công",
             ghi_chu_viet_ho_so: formData.get('quan_ly_ho_so.ghi_chu_viet_ho_so') || ""
@@ -925,6 +952,7 @@ function loadSurveyToForm(id) {
     form.elements['quan_ly_ho_so.nguoi_khao_sat'].value = survey.quan_ly_ho_so.nguoi_khao_sat || "";
     form.elements['quan_ly_ho_so.nguoi_viet_ho_so'].value = survey.quan_ly_ho_so.nguoi_viet_ho_so || "";
     form.elements['quan_ly_ho_so.han_viet_ho_so'].value = survey.quan_ly_ho_so.han_viet_ho_so || "";
+    form.elements['quan_ly_ho_so.site'].value = survey.quan_ly_ho_so.site || "";
     form.elements['quan_ly_ho_so.vnpt_khu_vuc'].value = survey.quan_ly_ho_so.vnpt_khu_vuc || "";
     form.elements['quan_ly_ho_so.tinh_trang'].value = survey.quan_ly_ho_so.tinh_trang || "Mới khảo sát chưa phân công";
     if (form.elements['quan_ly_ho_so.ghi_chu_viet_ho_so']) {
@@ -1216,6 +1244,7 @@ function flattenSurvey(survey) {
     return {
         "Ngày Nhập": new Date(survey.thoi_gian_nhap).toLocaleString('vi-VN'),
         "Tên Khảo Sát": survey.ten_khao_sat,
+        "Site": survey.quan_ly_ho_so.site || "",
         "Đơn vị khảo sát": survey.don_vi_khao_sat,
 
         "Tổng máy bàn": survey.ha_tang_thiet_bi.tong_may_ban,
