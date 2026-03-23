@@ -172,7 +172,7 @@ function renderList(items) {
                 <!-- Bottom Section: Buttons in one row -->
                 <div class="btns" style="display: flex; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 10px; justify-content: flex-end;">
                     <button class="mini-btn primary" type="button" data-action="detail" style="flex: 1; max-width: 100px;">Chi tiết</button>
-                    ${isEditor ? `<button class="mini-btn" type="button" data-action="edit" style="flex: 1; max-width: 80px;">Sửa</button>` : ``}
+                    ${isEditor ? `<a href="index.html?editId=${survey.id}" class="mini-btn" style="flex: 1; max-width: 80px; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center;">Sửa</a>` : ``}
                     ${isEditor ? `<button class="mini-btn danger" type="button" data-action="delete" style="flex: 1; max-width: 80px;">Xóa</button>` : ``}
                 </div>
             </div>
@@ -183,11 +183,6 @@ function renderList(items) {
         });
 
         if (isEditor) {
-            const btnEdit = card.querySelector('[data-action="edit"]');
-            btnEdit.addEventListener('click', () => {
-                window.location.href = `index.html?editId=${survey.id}`;
-            });
-
             const btnDel = card.querySelector('[data-action="delete"]');
             btnDel.addEventListener('click', () => {
                 if (confirm(`Xác nhận xóa khảo sát: ${name}?`)) {
@@ -340,4 +335,28 @@ if (searchInput) searchInput.addEventListener('input', applyFilters);
 if (vnptFilter) vnptFilter.addEventListener('change', applyFilters);
 if (writerFilter) writerFilter.addEventListener('change', applyFilters);
 if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+
+// Refresh button
+const btnRefresh = document.getElementById('btnRefresh');
+if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+        // Show spinning/loading effect
+        const originalHtml = btnRefresh.innerHTML;
+        btnRefresh.disabled = true;
+        btnRefresh.innerHTML = '⌛ Đang tải...';
+        
+        // Re-fetch from Firebase (this will trigger the .on('value') listener)
+        surveysRef.once('value').then(() => {
+            applyFilters(); // Re-apply current selections
+            setTimeout(() => {
+                btnRefresh.disabled = false;
+                btnRefresh.innerHTML = originalHtml;
+            }, 500);
+        }).catch(err => {
+            console.error("Refresh error:", err);
+            btnRefresh.disabled = false;
+            btnRefresh.innerHTML = originalHtml;
+        });
+    });
+}
 
