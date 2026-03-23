@@ -19,7 +19,8 @@ const WRITER_LIST = [
     "Nguyễn Quyết Thắng",
     "Trần Đại Dương",
     "Ngô Tuấn Ngọc",
-    "Nguyễn Đức Hoàng"
+    "Nguyễn Đức Hoàng",
+    "Lê Công Minh"
 ];
 
 const COMPLETED_STATUSES = [
