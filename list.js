@@ -319,11 +319,13 @@ surveysRef.on('value', (snapshot) => {
     }
 
     // Populate Specific Statuses filter
-    if (specificStatusGroup) {
+    if (statusFilter && specificStatusGroup) {
+        const currentSelected = statusFilter.value;
         specificStatusGroup.innerHTML = '';
         Array.from(uniqueStatuses).sort().forEach(status => {
             specificStatusGroup.innerHTML += `<option value="${status}">${status}</option>`;
         });
+        statusFilter.value = currentSelected;
     }
 
     // Apply filters instead of raw renderList
