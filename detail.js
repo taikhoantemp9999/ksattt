@@ -729,7 +729,7 @@ function renderStatusUpdateUI(data) {
     const statusOptions = [
         "Mới khảo sát chưa phân công",
         "Đã phân công",
-        "Đang viết hồ sơ",
+        "Hồ sơ chưa đạt, yêu cầu viết lại",
         "Hồ sơ thiếu thông tin không viết được",
         "Đã gửi cho quản lý địa bàn",
         "Đã gửi lại hồ sơ cho VNPT Khu Vực",
@@ -745,14 +745,14 @@ function renderStatusUpdateUI(data) {
         const viewerAllowedFrom = [
             "Mới khảo sát chưa phân công",
             "Đã phân công",
-            "Đang viết hồ sơ",
+            "Hồ sơ chưa đạt, yêu cầu viết lại",
             "Hồ sơ thiếu thông tin không viết được",
             "Đã tiếp xúc chờ khách hàng phản hồi"
         ];
 
         if (viewerAllowedFrom.includes(currentStatus)) {
             allowedOptions = [
-                "Đang viết hồ sơ",
+                "Hồ sơ chưa đạt, yêu cầu viết lại",
                 "Hồ sơ thiếu thông tin không viết được",
                 "Đã gửi cho quản lý địa bàn"
             ];
