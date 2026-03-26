@@ -180,7 +180,7 @@ function renderWriterSelect() {
         if (writer && writerStats[writer]) {
             if (!COMPLETED_STATUSES.includes(status)) {
                 writerStats[writer].pending++;
-                if (status === "Hồ sơ thiếu thông tin không viết được") {
+                if (status === "Hồ sơ thiếu thông tin không viết được" || status === "Chờ bộ mẫu, sẽ viết sau") {
                     writerStats[writer].missingInfo++;
                 }
             }

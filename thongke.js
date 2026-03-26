@@ -84,18 +84,20 @@ function renderStats(items) {
 
         statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0, pending: 0 };
+        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0, waitingTemplate: 0, pending: 0 };
         regionStats[region].total++;
         regionStats[region].status[status] = (regionStats[region].status[status] || 0) + 1;
         if (isNear) regionStats[region].near++;
         if (status === "Đã gửi cho quản lý địa bàn") regionStats[region].sentToRegion++;
         if (status === "Hồ sơ thiếu thông tin không viết được") regionStats[region].missingInfo++;
+        if (status === "Chờ bộ mẫu, sẽ viết sau") regionStats[region].waitingTemplate++;
 
-        if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0, completed: 0, pending: 0, deadlines: {}, missingInfo: 0 };
+        if (!writerStats[writer]) writerStats[writer] = { total: 0, status: {}, near: 0, completed: 0, pending: 0, deadlines: {}, missingInfo: 0, waitingTemplate: 0 };
         writerStats[writer].total++;
         writerStats[writer].status[status] = (writerStats[writer].status[status] || 0) + 1;
         if (isNear) writerStats[writer].near++;
         if (status === "Hồ sơ thiếu thông tin không viết được") writerStats[writer].missingInfo++;
+        if (status === "Chờ bộ mẫu, sẽ viết sau") writerStats[writer].waitingTemplate++;
         
         if (COMPLETED_STATUSES.includes(status)) {
             writerStats[writer].completed++;
@@ -162,6 +164,7 @@ function renderStats(items) {
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
                         <th style="text-align: center; color: #ef4444;">Thiếu TT</th>
+                        <th style="text-align: center; color: #6366f1;">Chờ mẫu</th>
                         <th style="text-align: center; color: #f59e0b;">Đang viết</th>
                         <th style="text-align: center; color: #0369a1;">Đã gửi QLĐB</th>
                         <th>Trạng thái hiện tại</th>
@@ -189,9 +192,15 @@ function renderStats(items) {
                                 </span>
                             </td>
                             <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #6366f1;" 
+                                      onclick="filterAndShow('Khu vực: ${reg} (Chờ bộ mẫu)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Chờ bộ mẫu, sẽ viết sau'))">
+                                    ${s.waitingTemplate}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
                                 <span class="clickable-stat" style="font-weight: 800; color: #f59e0b;" 
-                                      onclick="filterAndShow('Khu vực: ${reg} (Đang viết)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được'))">
-                                    ${s.pending - s.missingInfo}
+                                      onclick="filterAndShow('Khu vực: ${reg} (Đang viết)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được') && (s.quan_ly_ho_so?.tinh_trang !== 'Chờ bộ mẫu, sẽ viết sau'))">
+                                    ${s.pending - s.missingInfo - s.waitingTemplate}
                                 </span>
                             </td>
                             <td style="text-align: center;">
@@ -218,6 +227,7 @@ function renderStats(items) {
                         <th style="text-align: center;">Tổng</th>
                         <th style="text-align: center;">Gần hạn</th>
                         <th style="text-align: center; color: #ef4444;">Thiếu TT</th>
+                        <th style="text-align: center; color: #6366f1;">Chờ mẫu</th>
                         <th style="text-align: center; color: #f59e0b;">Đang viết</th>
                         <th style="text-align: center; color: #16a34a;">Đã xong</th>
                         <th style="text-align: center; color: #ef4444;">Chưa xong</th>
@@ -247,9 +257,15 @@ function renderStats(items) {
                                 </span>
                             </td>
                             <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #6366f1;"
+                                      onclick="filterAndShow('Người viết: ${wr} (Chờ bộ mẫu)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && (s.quan_ly_ho_so?.tinh_trang === 'Chờ bộ mẫu, sẽ viết sau'))">
+                                    ${s.waitingTemplate}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
                                 <span class="clickable-stat" style="font-weight: 800; color: #f59e0b;"
-                                      onclick="filterAndShow('Người viết: ${wr} (Đang viết)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được'))">
-                                    ${s.pending - s.missingInfo}
+                                      onclick="filterAndShow('Người viết: ${wr} (Đang viết)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được') && (s.quan_ly_ho_so?.tinh_trang !== 'Chờ bộ mẫu, sẽ viết sau'))">
+                                    ${s.pending - s.missingInfo - s.waitingTemplate}
                                 </span>
                             </td>
                             <td style="text-align: center;">
