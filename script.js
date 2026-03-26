@@ -69,6 +69,7 @@ writersRef.on('value', snap => {
     danhmucNguoiViet = [];
     snap.forEach(c => { danhmucNguoiViet.push({ id: c.key, ...c.val() }); });
     renderWriterSelect();
+    renderSurveyorSelect();
 });
 
 // ===== Simple login guard (role-based) =====
@@ -205,6 +206,24 @@ function renderWriterSelect() {
     if (currentValue) select.value = currentValue;
 }
 
+function renderSurveyorSelect() {
+    const select = document.getElementById('nguoi_khao_sat');
+    if (!select) return;
+
+    const currentValue = select.value;
+    let html = '<option value="">-- Chọn người khảo sát --</option>';
+    
+    // Tạo danh sách đã sort (chỉ lấy tên)
+    const sortedWriters = [...danhmucNguoiViet].sort((a,b) => a.ten.localeCompare(b.ten));
+    
+    sortedWriters.forEach(w => {
+        html += `<option value="${w.ten}">${w.ten}</option>`;
+    });
+
+    select.innerHTML = html;
+    if (currentValue) select.value = currentValue;
+}
+
 function renderVnptSelect() {
     const select = document.getElementById('vnpt_khu_vuc');
     if (!select) return;
@@ -314,6 +333,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         hanVietHoSoInput.value = tomorrow.toISOString().split('T')[0];
+    }
+
+    // Tự động phân công người viết hồ sơ và chỉnh trạng thái
+    const nguoiKhaoSatSelect = document.getElementById('nguoi_khao_sat');
+    const nguoiVietHoSoSelect = document.getElementById('nguoi_viet_ho_so');
+    const tinhTrangSelect = document.getElementById('tinh_trang');
+
+    if (nguoiKhaoSatSelect) {
+        nguoiKhaoSatSelect.addEventListener('change', function() {
+            if (this.value) {
+                if (nguoiVietHoSoSelect) nguoiVietHoSoSelect.value = this.value;
+                if (tinhTrangSelect) tinhTrangSelect.value = 'Đã phân công';
+            }
+        });
     }
 });
 
