@@ -59,6 +59,48 @@ if (isAdmin) {
             window.location.href = 'danhmucvattu.html';
         });
     }
+
+    const btnBackup = document.getElementById('btnBackup');
+    if (btnBackup) {
+        btnBackup.style.display = 'inline-flex';
+        btnBackup.addEventListener('click', () => {
+            const originalText = btnBackup.innerHTML;
+            btnBackup.disabled = true;
+            btnBackup.innerHTML = '⌛ Đang tạo file...';
+
+            database.ref().once('value').then(snap => {
+                const data = snap.val();
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const now = new Date();
+                const timestamp = now.getFullYear() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0') + '_' + 
+                    String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0') + 
+                    String(now.getSeconds()).padStart(2, '0');
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_ksattt_${timestamp}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                btnBackup.disabled = false;
+                btnBackup.innerHTML = originalText;
+                alert('Backup thành công!');
+            }).catch(err => {
+                console.error("Backup error:", err);
+                btnBackup.disabled = false;
+                btnBackup.innerHTML = originalText;
+                alert('Lỗi backup: ' + err.message);
+            });
+        });
+    }
 }
 
 // Ensure editorActions container itself is visible if it contains something visible
@@ -213,6 +255,7 @@ const COMPLETED_STATUSES = [
 
 const vnptFilter = document.getElementById('vnptFilter');
 const writerFilter = document.getElementById('writerFilter');
+const surveyorFilter = document.getElementById('surveyorFilter');
 const statusFilter = document.getElementById('statusFilter');
 const specificStatusGroup = document.getElementById('specificStatusGroup');
 
@@ -220,6 +263,7 @@ function applyFilters() {
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const vnptSelected = vnptFilter ? vnptFilter.value : '';
     const writerSelected = writerFilter ? writerFilter.value : '';
+    const surveyorSelected = surveyorFilter ? surveyorFilter.value : '';
     const statusSelected = statusFilter ? statusFilter.value : '';
 
     const filtered = allSurveys.filter(s => {
@@ -242,6 +286,10 @@ function applyFilters() {
         // Filter by Writer
         const writer = ql.nguoi_viet_ho_so || "Chưa phân công";
         if (writerSelected && writer !== writerSelected) return false;
+
+        // Filter by Surveyor
+        const surveyorItem = ql.nguoi_khao_sat || "N/A";
+        if (surveyorSelected && surveyorItem !== surveyorSelected) return false;
 
         // Filter by Status
         const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
@@ -281,6 +329,7 @@ surveysRef.on('value', (snapshot) => {
     allSurveys = [];
     const uniqueVNPT = new Set();
     const uniqueWriters = new Set();
+    const uniqueSurveyors = new Set();
     const uniqueStatuses = new Set();
     
     snapshot.forEach((child) => {
@@ -292,6 +341,10 @@ surveysRef.on('value', (snapshot) => {
         if (ql.vnpt_khu_vuc) uniqueVNPT.add(ql.vnpt_khu_vuc);
         const writer = ql.nguoi_viet_ho_so || "Chưa phân công";
         uniqueWriters.add(writer);
+
+        const surveyorItem = ql.nguoi_khao_sat || "N/A";
+        uniqueSurveyors.add(surveyorItem);
+
         const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
         uniqueStatuses.add(status);
     });
@@ -318,6 +371,16 @@ surveysRef.on('value', (snapshot) => {
         writerFilter.value = currentSelected;
     }
 
+    // Populate Surveyor filter
+    if (surveyorFilter) {
+        const currentSelected = surveyorFilter.value;
+        surveyorFilter.innerHTML = '<option value="">Tất cả Người KS</option>';
+        Array.from(uniqueSurveyors).sort().forEach(s => {
+            surveyorFilter.innerHTML += `<option value="${s}">${s}</option>`;
+        });
+        surveyorFilter.value = currentSelected;
+    }
+
     // Populate Specific Statuses filter
     if (statusFilter && specificStatusGroup) {
         const currentSelected = statusFilter.value;
@@ -336,6 +399,7 @@ surveysRef.on('value', (snapshot) => {
 if (searchInput) searchInput.addEventListener('input', applyFilters);
 if (vnptFilter) vnptFilter.addEventListener('change', applyFilters);
 if (writerFilter) writerFilter.addEventListener('change', applyFilters);
+if (surveyorFilter) surveyorFilter.addEventListener('change', applyFilters);
 if (statusFilter) statusFilter.addEventListener('change', applyFilters);
 
 // Refresh button
