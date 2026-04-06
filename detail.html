@@ -319,8 +319,8 @@
             padding: 12px 8px;
             text-align: center;
             border: 2px solid;
-            cursor: default; /* trang chi tiết chỉ hiển thị */
-            transition: box-shadow 0.2s;
+            cursor: pointer; /* Thay đổi thành pointer để biết có thể click */
+            transition: all 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -329,6 +329,12 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             background-color: #ffffff;
             user-select: none;
+        }
+
+        .bldg-map .room-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: var(--primary);
         }
 
         .bldg-map .has-isp-room {
@@ -404,6 +410,69 @@
             border-color: #86efac;
             color: #16a34a;
         }
+
+        /* Room Equipment Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 24px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 900px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            position: relative;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .close-modal {
+            color: #64748b;
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-modal:hover {
+            color: #0f172a;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 12px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -428,6 +497,25 @@
             <!-- Data will be rendered here -->
             <div class="empty-state">Đang tải dữ liệu từ server...</div>
         </div>
+    </div>
+
+    <!-- Room Equipment Modal -->
+    <div id="roomEqModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeRoomEquipments()">&times;</span>
+            <div class="modal-header">
+                <h2 id="modalRoomName">Danh sách thiết bị tại phòng</h2>
+            </div>
+            <div id="modalRoomBody" class="modal-body">
+                <!-- Equipment list will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="imageLightbox" class="image-lightbox" onclick="closeLightbox()">
+        <span class="close-lightbox">&times;</span>
+        <img id="lightboxImg" src="" alt="Zoomed Image">
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

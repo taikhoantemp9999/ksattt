@@ -522,9 +522,9 @@ function renderBuildingsDetailed(buildingsArray) {
                     }
 
                     buildingsHtml += `
-                        <div class="room-card ${extraClass} status-${status}" title="${tooltip}">
+                        <div class="room-card ${extraClass} status-${status}" title="${tooltip}" onclick="showRoomEquipments(${index}, '${node.id}')">
                             <div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${safeStr(node.name)}</div>
-                            <div class="room-eq-count" style="margin-bottom: 4px;">💻 ${eqCount}</div>
+                            <div class="room-eq-count" style="margin-bottom: 4px;" onclick="event.stopPropagation(); showRoomEquipments(${index}, '${node.id}')">💻 ${eqCount}</div>
                             ${noteHtml}
                         </div>
                     `;
@@ -626,7 +626,18 @@ window.openLightbox = function (url) {
     if (lightbox && img) {
         img.src = url;
         lightbox.classList.add('active');
+        lightbox.classList.remove('zoomed'); // reset zoom
         document.body.style.overflow = 'hidden'; // Ngăn scroll
+        
+        // Ensure image starts centered and zoomable
+        img.onclick = function(e) {
+            e.stopPropagation(); // prevent lightbox close
+            lightbox.classList.toggle('zoomed');
+            if (lightbox.classList.contains('zoomed')) {
+                // If it's a very tall image, scroll to top
+                lightbox.scrollTop = 0;
+            }
+        };
     }
 };
 
@@ -634,9 +645,22 @@ window.closeLightbox = function () {
     const lightbox = document.getElementById('imageLightbox');
     if (lightbox) {
         lightbox.classList.remove('active');
+        lightbox.classList.remove('zoomed');
         document.body.style.overflow = ''; // Cho phép scroll lại
     }
 };
+
+// Close modal if clicking background (not image)
+window.addEventListener('DOMContentLoaded', () => {
+    const lightbox = document.getElementById('imageLightbox');
+    if (lightbox) {
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
+    }
+});
 
 function exportEquipmentExcel(surveyData) {
     if (!surveyData || !surveyData.buildingsArray || !Array.isArray(surveyData.buildingsArray)) {
@@ -862,3 +886,87 @@ window.updateWritingNotes = function (id) {
         alert("Lỗi khi cập nhật ghi chú: " + err.message);
     });
 };
+
+// --- Room Equipment Popup Functions ---
+
+window.showRoomEquipments = function(bldgIndex, nodeId) {
+    if (!currentSurveyData || !currentSurveyData.buildingsArray) return;
+    
+    const bldg = currentSurveyData.buildingsArray[bldgIndex];
+    if (!bldg) return;
+    
+    const nodes = Array.isArray(bldg.nodes) ? bldg.nodes : [];
+    const node = nodes.find(n => n.id === nodeId);
+    const nodeName = node ? node.name : 'Phòng không xác định';
+    
+    const eqs = Array.isArray(bldg.equipments) ? bldg.equipments : [];
+    const roomEqs = eqs.filter(eq => eq.nodeId === nodeId);
+    
+    const modal = document.getElementById('roomEqModal');
+    const modalTitle = document.getElementById('modalRoomName');
+    const modalBody = document.getElementById('modalRoomBody');
+    
+    if (!modal || !modalTitle || !modalBody) return;
+    
+    modalTitle.innerText = `Danh sách thiết bị: ${nodeName}`;
+    
+    if (roomEqs.length === 0) {
+        modalBody.innerHTML = '<div class="empty-state">Không có thiết bị nào trong phòng này.</div>';
+    } else {
+        let html = `
+            <table class="building-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">STT</th>
+                        <th style="width: 50%;">Tên thiết bị, Model</th>
+                        <th style="width: 42%;">Mục đích / Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        const isMainDevice = (eq) => eq && (eq.isMainDevice === true || eq.isMainDevice === "true");
+        const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
+
+        roomEqs.forEach((eq, idx) => {
+            const mainLabel = isMainDevice(eq) ? `<br><span class="tag tag-main">🌟 Mạch chính</span>` : '';
+            const nameModel = `${safeStr(eq.name)}${eq.model ? ` (${safeStr(eq.model)})` : ''}`;
+            
+            html += `
+                <tr>
+                    <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">${nameModel || '-'}</div>
+                        ${mainLabel}
+                    </td>
+                    <td>
+                        <div style="font-weight: 500; color: #334155;">${safeStr(eq.purpose) || '-'}</div>
+                        ${eq.isp ? `<div style="margin-top: 4px; font-size: 0.8rem; color: #0369a1;">🌐 ISP: ${eq.isp}</div>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table>`;
+        modalBody.innerHTML = html;
+    }
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+};
+
+window.closeRoomEquipments = function() {
+    const modal = document.getElementById('roomEqModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scroll
+    }
+};
+
+// Close modal if clicking outside the content
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('roomEqModal');
+    if (event.target == modal) {
+        closeRoomEquipments();
+    }
+});
