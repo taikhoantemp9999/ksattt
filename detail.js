@@ -521,11 +521,24 @@ function renderBuildingsDetailed(buildingsArray) {
                         </div>`;
                     }
 
+                    // Tạo danh sách thiết bị thu nhỏ
+                    let eqListHtml = '';
+                    if (nodeEqs.length > 0) {
+                        eqListHtml = `<div class="room-eq-list">`;
+                        nodeEqs.forEach(eq => {
+                            const isMain = isMainDevice(eq);
+                            const nameModel = `${safeStr(eq.name)}${eq.model ? ` (${safeStr(eq.model)})` : ''}`;
+                            eqListHtml += `<div class="room-eq-item ${isMain ? 'main' : ''}" title="${nameModel}">${isMain ? '🌟 ' : ''}${nameModel}</div>`;
+                        });
+                        eqListHtml += `</div>`;
+                    }
+
                     buildingsHtml += `
                         <div class="room-card ${extraClass} status-${status}" title="${tooltip}" onclick="showRoomEquipments(${index}, '${node.id}')">
                             <div class="room-name" style="${customNameStyle}" title="${tooltip}">${icon}${safeStr(node.name)}</div>
                             <div class="room-eq-count" style="margin-bottom: 4px;" onclick="event.stopPropagation(); showRoomEquipments(${index}, '${node.id}')">💻 ${eqCount}</div>
                             ${noteHtml}
+                            ${eqListHtml}
                         </div>
                     `;
                 });
