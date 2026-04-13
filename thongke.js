@@ -24,7 +24,6 @@ const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 
 let allItemsGlobal = [];
-let currentCalendarDate = new Date();
 
 const EXCLUDED_OVERDUE_STATUSES = [
     "Đã gửi lại hồ sơ cho VNPT Khu Vực",
@@ -84,7 +83,7 @@ function renderStats(items) {
 
         statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0, waitingTemplate: 0, pending: 0 };
+        if (!regionStats[region]) regionStats[region] = { total: 0, status: {}, near: 0, sentToRegion: 0, missingInfo: 0, waitingTemplate: 0, pending: 0, completed: 0 };
         regionStats[region].total++;
         regionStats[region].status[status] = (regionStats[region].status[status] || 0) + 1;
         if (isNear) regionStats[region].near++;
@@ -101,6 +100,7 @@ function renderStats(items) {
         
         if (COMPLETED_STATUSES.includes(status)) {
             writerStats[writer].completed++;
+            regionStats[region].completed++;
         } else {
             writerStats[writer].pending++;
             regionStats[region].pending++;
@@ -111,21 +111,27 @@ function renderStats(items) {
     });
 
     let html = `
-        <div class="section-title"><i class="fas fa-calendar-alt"></i> THEO DÕI HẠN XỬ LÝ THEO THÁNG</div>
-        <div id="calendarContainer">
-            ${renderCalendarInner(items)}
-        </div>
 
         <div class="section-title"><i class="fas fa-chart-pie"></i> I. TỔNG QUAN TÌNH HÌNH VIẾT HỒ SƠ</div>
-        <div class="stats-grid">
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
             <div class="stats-card clickable-stat" onclick="filterAndShow('Tất cả hồ sơ', s => true)">
                 <h3>Tổng số đã khảo sát</h3>
                 <div class="value">${total}</div>
             </div>
-            <div class="stats-card clickable-stat" style="border-color: #fca5a5; background: #fff1f2;" 
-                 onclick="filterAndShow('Hồ sơ sắp hết hạn / quá hạn', s => isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
-                <h3 style="color: #991b1b;">Sắp hết hạn / Quá hạn</h3>
-                <div class="value" style="color: #ef4444;">${nearOverdue}</div>
+            <div class="stats-card clickable-stat" style="border-color: #fca5a5;"
+                 onclick="filterAndShow('Hồ sơ thiếu thông tin', s => (s.quan_ly_ho_so?.tinh_trang === 'Hồ sơ thiếu thông tin không viết được'))">
+                <h3 style="color: #ef4444;">Thiếu thông tin</h3>
+                <div class="value" style="color: #ef4444;">${Object.values(regionStats).reduce((a,b) => a + b.missingInfo, 0)}</div>
+            </div>
+            <div class="stats-card clickable-stat" style="border-color: #fde68a;"
+                 onclick="filterAndShow('Hồ sơ đang viết', s => !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công') && (s.quan_ly_ho_so?.tinh_trang !== 'Hồ sơ thiếu thông tin không viết được') && (s.quan_ly_ho_so?.tinh_trang !== 'Chờ bộ mẫu, sẽ viết sau'))">
+                <h3 style="color: #f59e0b;">Đang viết</h3>
+                <div class="value" style="color: #f59e0b;">${Object.values(regionStats).reduce((a,b) => a + (b.pending - b.missingInfo - b.waitingTemplate), 0)}</div>
+            </div>
+            <div class="stats-card clickable-stat" style="border-color: #bbf7d0;"
+                 onclick="filterAndShow('Hồ sơ đã xong', s => COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
+                <h3 style="color: #16a34a;">Đã xong</h3>
+                <div class="value" style="color: #16a34a;">${Object.values(regionStats).reduce((a,b) => a + b.completed, 0)}</div>
             </div>
         </div>
 
@@ -162,12 +168,10 @@ function renderStats(items) {
                     <tr>
                         <th>Khu vực</th>
                         <th style="text-align: center;">Tổng</th>
-                        <th style="text-align: center;">Gần hạn</th>
                         <th style="text-align: center; color: #ef4444;">Thiếu TT</th>
-                        <th style="text-align: center; color: #6366f1;">Chờ mẫu</th>
                         <th style="text-align: center; color: #f59e0b;">Đang viết</th>
+                        <th style="text-align: center; color: #16a34a;">Đã xong</th>
                         <th style="text-align: center; color: #0369a1;">Đã gửi QLĐB</th>
-                        <th>Trạng thái hiện tại</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -180,21 +184,9 @@ function renderStats(items) {
                                 </span>
                             </td>
                             <td style="text-align: center;">
-                                <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}" 
-                                      onclick="filterAndShow('Khu vực: ${reg} (Gần hạn)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
-                                    ${s.near}
-                                </span>
-                            </td>
-                            <td style="text-align: center;">
                                 <span class="clickable-stat" style="font-weight: 800; color: #ef4444;" 
                                       onclick="filterAndShow('Khu vực: ${reg} (Hồ sơ thiếu thông tin)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Hồ sơ thiếu thông tin không viết được'))">
                                     ${s.missingInfo}
-                                </span>
-                            </td>
-                            <td style="text-align: center;">
-                                <span class="clickable-stat" style="font-weight: 800; color: #6366f1;" 
-                                      onclick="filterAndShow('Khu vực: ${reg} (Chờ bộ mẫu)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Chờ bộ mẫu, sẽ viết sau'))">
-                                    ${s.waitingTemplate}
                                 </span>
                             </td>
                             <td style="text-align: center;">
@@ -204,17 +196,30 @@ function renderStats(items) {
                                 </span>
                             </td>
                             <td style="text-align: center;">
+                                <span class="clickable-stat" style="font-weight: 800; color: #16a34a;"
+                                      onclick="filterAndShow('Khu vực: ${reg} (Đã xong)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
+                                    ${s.completed}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
                                 <span class="clickable-stat" style="font-weight: 800; color: #0369a1;" 
                                       onclick="filterAndShow('Khu vực: ${reg} (Đã gửi QLĐB)', s => (s.quan_ly_ho_so?.vnpt_khu_vuc || 'Chưa xác định') === '${reg}' && (s.quan_ly_ho_so?.tinh_trang === 'Đã gửi cho quản lý địa bàn'))">
                                     ${s.sentToRegion}
                                 </span>
                             </td>
-                            <td style="font-size: 0.8rem; color: #64748b; line-height: 1.5;">
-                                ${Object.entries(s.status).map(([st, c]) => `${st}: <b>${c}</b>`).join(' | ')}
-                            </td>
                         </tr>
                     `).join('')}
                 </tbody>
+                <tfoot style="background: #f8fafc; border-top: 2px solid #e2e8f0;">
+                    <tr style="font-weight: 900; color: #0f172a;">
+                        <td style="padding: 16px 20px;">TỔNG CỘNG</td>
+                        <td style="text-align: center; color: #0369a1;">${Object.values(regionStats).reduce((a,b) => a + b.total, 0)}</td>
+                        <td style="text-align: center; color: #ef4444;">${Object.values(regionStats).reduce((a,b) => a + b.missingInfo, 0)}</td>
+                        <td style="text-align: center; color: #f59e0b;">${Object.values(regionStats).reduce((a,b) => a + (b.pending - b.missingInfo - b.waitingTemplate), 0)}</td>
+                        <td style="text-align: center; color: #16a34a;">${Object.values(regionStats).reduce((a,b) => a + b.completed, 0)}</td>
+                        <td style="text-align: center; color: #0369a1;">${Object.values(regionStats).reduce((a,b) => a + b.sentToRegion, 0)}</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
@@ -225,14 +230,10 @@ function renderStats(items) {
                     <tr>
                         <th>Người viết hồ sơ</th>
                         <th style="text-align: center;">Tổng</th>
-                        <th style="text-align: center;">Gần hạn</th>
                         <th style="text-align: center; color: #ef4444;">Thiếu TT</th>
-                        <th style="text-align: center; color: #6366f1;">Chờ mẫu</th>
                         <th style="text-align: center; color: #f59e0b;">Đang viết</th>
                         <th style="text-align: center; color: #16a34a;">Đã xong</th>
                         <th style="text-align: center; color: #ef4444;">Chưa xong</th>
-                        <th style="width: 180px;">Phân bổ hạn (Chưa xong)</th>
-                        <th>Trạng thái hiện tại</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -245,21 +246,9 @@ function renderStats(items) {
                                 </span>
                             </td>
                             <td style="text-align: center;">
-                                <span class="clickable-stat" style="${s.near > 0 ? 'color: #ef4444; font-weight: 900;' : 'color: #94a3b8;'}"
-                                      onclick="filterAndShow('Người viết: ${wr} (Gần hạn)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && isDeadlineNear(s.quan_ly_ho_so?.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
-                                    ${s.near}
-                                </span>
-                            </td>
-                            <td style="text-align: center;">
                                 <span class="clickable-stat" style="font-weight: 800; color: #ef4444;"
                                       onclick="filterAndShow('Người viết: ${wr} (Hồ sơ thiếu thông tin)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && (s.quan_ly_ho_so?.tinh_trang === 'Hồ sơ thiếu thông tin không viết được'))">
                                     ${s.missingInfo}
-                                </span>
-                            </td>
-                            <td style="text-align: center;">
-                                <span class="clickable-stat" style="font-weight: 800; color: #6366f1;"
-                                      onclick="filterAndShow('Người viết: ${wr} (Chờ bộ mẫu)', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && (s.quan_ly_ho_so?.tinh_trang === 'Chờ bộ mẫu, sẽ viết sau'))">
-                                    ${s.waitingTemplate}
                                 </span>
                             </td>
                             <td style="text-align: center;">
@@ -280,23 +269,19 @@ function renderStats(items) {
                                     ${s.pending}
                                 </span>
                             </td>
-                            <td style="font-size: 0.8rem; color: #475569;">
-                                ${Object.keys(s.deadlines).length > 0 ? Object.entries(s.deadlines).sort((a,b) => new Date(a[0]) - new Date(b[0])).map(([date, count]) => `
-                                    <div style="margin-bottom: 2px;">
-                                        <span style="font-weight: 700; color: #1e293b;">${date.split('-').reverse().join('/')}:</span> 
-                                        <span class="clickable-stat" style="color: #0369a1; font-weight: 800;" 
-                                              onclick="filterAndShow('Hạn ${date} (${wr})', s => (s.quan_ly_ho_so?.nguoi_viet_ho_so || 'Chưa phân công') === '${wr}' && s.quan_ly_ho_so?.han_viet_ho_so === '${date}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang || 'Mới khảo sát chưa phân công'))">
-                                            ${count}
-                                        </span>
-                                    </div>
-                                `).join('') : '<span style="color: #94a3b8; font-style: italic;">N/A</span>'}
-                            </td>
-                            <td style="font-size: 0.8rem; color: #64748b; line-height: 1.5;">
-                                ${Object.entries(s.status).map(([st, c]) => `${st}: <b>${c}</b>`).join(' | ')}
-                            </td>
                         </tr>
                     `).join('')}
                 </tbody>
+                <tfoot style="background: #f8fafc; border-top: 2px solid #e2e8f0;">
+                    <tr style="font-weight: 900; color: #0f172a;">
+                        <td style="padding: 16px 20px;">TỔNG CỘNG</td>
+                        <td style="text-align: center; color: #0369a1;">${Object.values(writerStats).reduce((a,b) => a + b.total, 0)}</td>
+                        <td style="text-align: center; color: #ef4444;">${Object.values(writerStats).reduce((a,b) => a + b.missingInfo, 0)}</td>
+                        <td style="text-align: center; color: #f59e0b;">${Object.values(writerStats).reduce((a,b) => a + (b.pending - b.missingInfo - b.waitingTemplate), 0)}</td>
+                        <td style="text-align: center; color: #16a34a;">${Object.values(writerStats).reduce((a,b) => a + b.completed, 0)}</td>
+                        <td style="text-align: center; color: #ef4444;">${Object.values(writerStats).reduce((a,b) => a + b.pending, 0)}</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
@@ -422,84 +407,4 @@ surveysRef.on('value', (snapshot) => {
     renderStats(allItemsGlobal);
 });
 
-function renderCalendarInner(items) {
-    const year = currentCalendarDate.getFullYear();
-    const month = currentCalendarDate.getMonth();
-    
-    // Aggregate deadlines for the selected month (only pending)
-    const dailyCounts = {};
-    items.forEach(s => {
-        const ql = s.quan_ly_ho_so || {};
-        const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
-        const deadline = ql.han_viet_ho_so;
-        if (deadline && !COMPLETED_STATUSES.includes(status)) {
-            const d = new Date(deadline);
-            if (d.getFullYear() === year && d.getMonth() === month) {
-                const day = d.getDate();
-                dailyCounts[day] = (dailyCounts[day] || 0) + 1;
-            }
-        }
-    });
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const today = new Date();
-    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
-
-    const monthNames = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
-    
-    let calHtml = `
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <h3>${monthNames[month]} ${year}</h3>
-                <div class="calendar-nav">
-                    <button class="nav-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
-                    <button class="nav-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </div>
-            <div class="calendar-grid">
-                <div class="calendar-day-head">T2</div>
-                <div class="calendar-day-head">T3</div>
-                <div class="calendar-day-head">T4</div>
-                <div class="calendar-day-head">T5</div>
-                <div class="calendar-day-head">T6</div>
-                <div class="calendar-day-head">T7</div>
-                <div class="calendar-day-head">CN</div>
-    `;
-
-    // Adjust first day (JS 0=Sun, we want 1=Mon, ..., 0=Sun)
-    let startOffset = firstDay === 0 ? 6 : firstDay - 1;
-
-    for (let i = 0; i < startOffset; i++) {
-        calHtml += `<div class="calendar-day empty"></div>`;
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-        const count = dailyCounts[d] || 0;
-        const isToday = isCurrentMonth && today.getDate() === d;
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        
-        calHtml += `
-            <div class="calendar-day ${isToday ? 'today' : ''} ${count > 0 ? 'has-events' : ''}">
-                <span class="day-num">${d}</span>
-                ${count > 0 ? `
-                    <span class="day-count" title="Bấm để xem danh sách" 
-                          onclick="filterAndShow('Hạn xử lý ngày ${d}/${month+1}/${year}', s => s.quan_ly_ho_so?.han_viet_ho_so === '${dateStr}' && !COMPLETED_STATUSES.includes(s.quan_ly_ho_so?.tinh_trang))">
-                        ${count}
-                    </span>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    calHtml += `</div></div>`;
-    return calHtml;
-}
-
-window.changeMonth = function(offset) {
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
-    const container = document.getElementById('calendarContainer');
-    if (container) {
-        container.innerHTML = renderCalendarInner(allItemsGlobal);
-    }
-};
