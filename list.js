@@ -426,3 +426,101 @@ if (btnRefresh) {
     });
 }
 
+// Export Excel button
+const btnExportExcel = document.getElementById('btnExportExcel');
+if (btnExportExcel) {
+    btnExportExcel.addEventListener('click', () => {
+        exportCustomerListExcel();
+    });
+}
+
+function exportCustomerListExcel() {
+    if (!allSurveys || allSurveys.length === 0) {
+        alert("Chưa có dữ liệu để xuất.");
+        return;
+    }
+    if (typeof XLSX === 'undefined') {
+        alert("Thiếu thư viện xuất Excel (XLSX). Vui lòng kiểm tra kết nối mạng hoặc tải lại trang.");
+        return;
+    }
+
+    // Lấy dữ liệu đã lọc (giống applyFilters)
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const vnptSelected = vnptFilter ? vnptFilter.value : '';
+    const writerSelected = writerFilter ? writerFilter.value : '';
+    const surveyorSelected = surveyorFilter ? surveyorFilter.value : '';
+    const statusSelected = statusFilter ? statusFilter.value : '';
+
+    const filtered = allSurveys.filter(s => {
+        const ql = s.quan_ly_ho_so || {};
+        const name = (s.don_vi_khao_sat || "").toLowerCase();
+        if (query && !name.includes(query)) return false;
+
+        const region = ql.vnpt_khu_vuc || "Chưa xác định";
+        if (vnptSelected) {
+            if (vnptSelected === 'Khối UBND/ĐU') {
+                if (region === 'Sở Ban Ngành' || region === 'Y tế') return false;
+            } else {
+                if (region !== vnptSelected) return false;
+            }
+        }
+
+        const writer = ql.nguoi_viet_ho_so || "Chưa phân công";
+        if (writerSelected && writer !== writerSelected) return false;
+
+        const surveyorItem = ql.nguoi_khao_sat || "N/A";
+        if (surveyorSelected && surveyorItem !== surveyorSelected) return false;
+
+        const status = ql.tinh_trang || "Mới khảo sát chưa phân công";
+        if (statusSelected) {
+            if (statusSelected === 'group_overdue') {
+                const isNear = isDeadlineNear(ql.han_viet_ho_so) && !EXCLUDED_OVERDUE_STATUSES.includes(status);
+                if (!isNear) return false;
+            } else if (statusSelected === 'group_pending') {
+                const isPending = !COMPLETED_STATUSES.includes(status) && status !== 'Hồ sơ thiếu thông tin không viết được';
+                if (!isPending) return false;
+            } else if (statusSelected === 'group_completed') {
+                const isCompleted = COMPLETED_STATUSES.includes(status);
+                if (!isCompleted) return false;
+            } else if (statusSelected === 'group_missing') {
+                const isMissing = status === 'Hồ sơ thiếu thông tin không viết được';
+                if (!isMissing) return false;
+            } else {
+                if (status !== statusSelected) return false;
+            }
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        alert("Không có khách hàng nào khớp với bộ lọc để xuất.");
+        return;
+    }
+
+    // Chuẩn bị dữ liệu cho Excel
+    const header = ["STT", "Tên khách hàng", "Số lượng máy bàn", "Số lượng laptop"];
+    const rows = filtered.map((s, idx) => {
+        const ha_tang = s.ha_tang_thiet_bi || {};
+        return [
+            idx + 1,
+            s.don_vi_khao_sat || "N/A",
+            ha_tang.tong_may_ban || 0,
+            ha_tang.tong_laptop || 0
+        ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    // Độ rộng cột
+    ws['!cols'] = [
+        { wch: 6 },
+        { wch: 40 },
+        { wch: 20 },
+        { wch: 20 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DanhSachKhachHang");
+
+    const fileName = `danh_sach_khach_hang_attt_${new Date().getTime()}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
