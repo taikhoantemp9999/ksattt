@@ -166,6 +166,7 @@ function renderList(items) {
 
         const name = survey.don_vi_khao_sat || '(Chưa đặt tên)';
         const time = survey.thoi_gian_nhap ? new Date(survey.thoi_gian_nhap).toLocaleString('vi-VN') : (survey.nguoi_nhap || 'N/A');
+        const statusVal = (survey.quan_ly_ho_so && survey.quan_ly_ho_so.tinh_trang) || "Mới khảo sát chưa phân công";
 
         card.innerHTML = `
             <div class="card-body" style="padding: 12px;">
@@ -214,6 +215,7 @@ function renderList(items) {
                 <!-- Bottom Section: Buttons in one row -->
                 <div class="btns" style="display: flex; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 10px; justify-content: flex-end;">
                     <button class="mini-btn primary" type="button" data-action="detail" style="flex: 1; max-width: 100px;">Chi tiết</button>
+                    ${isEditor && statusVal !== "Đã phân công" ? `<button class="mini-btn success" type="button" data-action="assign" style="flex: 1; max-width: 120px;">Đã phân công</button>` : ``}
                     ${isEditor ? `<a href="index.html?editId=${survey.id}" class="mini-btn" style="flex: 1; max-width: 80px; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center;">Sửa</a>` : ``}
                     ${isEditor ? `<button class="mini-btn danger" type="button" data-action="delete" style="flex: 1; max-width: 80px;">Xóa</button>` : ``}
                 </div>
@@ -233,6 +235,19 @@ function renderList(items) {
                     });
                 }
             });
+
+            const btnAssign = card.querySelector('[data-action="assign"]');
+            if (btnAssign) {
+                btnAssign.addEventListener('click', () => {
+                    surveysRef.child(survey.id).update({
+                        "quan_ly_ho_so/tinh_trang": "Đã phân công",
+                        "nguoi_cap_nhat_trang_thai": auth.user,
+                        "thoi_gian_cap_nhat_trang_thai": new Date().toISOString()
+                    }).catch(err => {
+                        alert("Lỗi khi cập nhật trạng thái: " + err.message);
+                    });
+                });
+            }
         }
 
         listContainer.appendChild(card);
