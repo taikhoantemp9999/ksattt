@@ -772,7 +772,8 @@ function renderStatusUpdateUI(data) {
         "Đã gửi lại hồ sơ cho VNPT Khu Vực",
         "Đã gửi cho CA",
         "Công an đã phê duyệt",
-        "Công an trả lại"
+        "Công an trả lại",
+        "Sử dụng Viettel"
     ];
 
     let allowedOptions = [];
