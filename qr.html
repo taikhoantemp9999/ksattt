@@ -310,11 +310,129 @@
                 box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
             }
         }
+
+        /* Passcode Screen Styles */
+        .passcode-wrapper {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+            padding: 20px;
+        }
+
+        .passcode-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            animation: floatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .passcode-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.5rem;
+            border-radius: var(--radius);
+            border: 2px solid var(--border);
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 4px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .passcode-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
+            background: #ffffff;
+            transform: scale(1.02);
+        }
+
+        .passcode-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, #3730a3 100%);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .passcode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(79, 70, 229, 0.3);
+            background: linear-gradient(135deg, var(--primary-hover) 0%, #312e81 100%);
+        }
+
+        .passcode-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 10px rgba(79, 70, 229, 0.2);
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        .shake-error {
+            animation: shake 0.4s ease-in-out;
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15) !important;
+        }
     </style>
 </head>
 
 <body>
-    <div class="app-container">
+    <!-- Passcode Verification Block -->
+    <div id="passcodeBlock" class="passcode-wrapper">
+        <div class="passcode-card">
+            <div style="font-size: 3.5rem; margin-bottom: 24px; display: inline-block; animation: bounce 2s infinite ease-in-out;">🔑</div>
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 12px;">Mã Bảo Mật QR</h2>
+            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5;">Vui lòng nhập mã bảo mật <strong>202605</strong> để truy cập tính năng truyền văn bản.</p>
+            
+            <div style="text-align: left; position: relative;">
+                <input type="password" id="passcodeInput" class="passcode-input" placeholder="••••••" maxlength="8">
+            </div>
+            
+            <button type="button" id="btnSubmitPasscode" class="passcode-btn">
+                Xác nhận truy cập
+            </button>
+            
+            <p id="passcodeError" style="color: var(--danger); font-size: 0.9rem; margin-top: 16px; font-weight: 600; display: none;">
+                ⚠️ Mã bảo mật không chính xác!
+            </p>
+        </div>
+    </div>
+
+    <div class="app-container" id="appContainer" style="display: none;">
         <!-- Header -->
         <header class="app-header">
             <div class="header-content">
@@ -406,8 +524,12 @@
 
     <script src="auth.js?v=20260317"></script>
     <script>
-        // Require login for PC user
-        const auth = requireAuth({ redirectTo: 'login.html' });
+        // Check access immediately (standard auth or passcode bypass)
+        let hasAccess = false;
+        const currentAuth = authGet();
+        if (currentAuth || sessionStorage.getItem("qr_bypass_auth") === "202605" || localStorage.getItem("qr_bypass_auth") === "202605") {
+            hasAccess = true;
+        }
 
         // Firebase Configuration (Same as other pages)
         const firebaseConfig = {
@@ -560,7 +682,8 @@
         };
 
         // Initialize session and QR Code page
-        document.addEventListener("DOMContentLoaded", () => {
+        // Initialize application logic after successful access check
+        function initQrPage() {
             // Generate a unique session key using Firebase push keys
             sessionId = database.ref('qr_sessions').push().key;
 
@@ -628,6 +751,63 @@
                     });
                 }
             });
+        }
+
+        // Passcode Submission Handler
+        function submitPasscode() {
+            const inputEl = document.getElementById("passcodeInput");
+            const code = inputEl.value.trim();
+            const errorEl = document.getElementById("passcodeError");
+            
+            if (code === "202605") {
+                sessionStorage.setItem("qr_bypass_auth", "202605");
+                localStorage.setItem("qr_bypass_auth", "202605");
+                errorEl.style.display = "none";
+                inputEl.classList.remove("shake-error");
+                
+                // Show application and hide passcode screen
+                document.getElementById("passcodeBlock").style.display = "none";
+                document.getElementById("appContainer").style.display = "block";
+                
+                initQrPage();
+            } else {
+                errorEl.style.display = "block";
+                inputEl.classList.add("shake-error");
+                inputEl.value = "";
+                inputEl.focus();
+                
+                setTimeout(() => {
+                    inputEl.classList.remove("shake-error");
+                }, 400);
+            }
+        }
+
+        // Handle page access check on load
+        document.addEventListener("DOMContentLoaded", () => {
+            // Bind passcode events
+            const passcodeInput = document.getElementById("passcodeInput");
+            if (passcodeInput) {
+                passcodeInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        submitPasscode();
+                    }
+                });
+            }
+            const btnSubmit = document.getElementById("btnSubmitPasscode");
+            if (btnSubmit) {
+                btnSubmit.addEventListener("click", submitPasscode);
+            }
+
+            // Check Access
+            if (hasAccess) {
+                document.getElementById("appContainer").style.display = "block";
+                document.getElementById("passcodeBlock").style.display = "none";
+                initQrPage();
+            } else {
+                document.getElementById("appContainer").style.display = "none";
+                document.getElementById("passcodeBlock").style.display = "flex";
+                if (passcodeInput) passcodeInput.focus();
+            }
         });
     </script>
 </body>
