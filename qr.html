@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Truyền Văn Bản Bằng Mã QR</title>
+    <!-- Google Fonts cho Typography hiện đại -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK (Compat mode) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <!-- Thư viện sinh mã QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        .qr-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-top: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .qr-layout {
+                grid-template-columns: 1fr 1.2fr;
+            }
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+            border-radius: var(--radius);
+            padding: 24px;
+        }
+
+        .qr-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .qr-wrapper {
+            position: relative;
+            padding: 16px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            margin: 20px 0;
+            border: 2px solid var(--primary-light);
+            display: inline-block;
+        }
+
+        /* Pulsing scanning beam animation */
+        .qr-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: scan 3s linear infinite;
+            z-index: 10;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .qr-instructions {
+            text-align: left;
+            margin-bottom: 20px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--primary);
+        }
+
+        .qr-instructions ol {
+            padding-left: 20px;
+            font-size: 0.95rem;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .qr-instructions li {
+            margin-bottom: 8px;
+        }
+
+        .qr-instructions li::marker {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* Message Log Area */
+        .messages-container {
+            display: flex;
+            flex-direction: column;
+            height: 520px;
+        }
+
+        .messages-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .messages-header h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .messages-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 4px;
+        }
+
+        /* Nice Scrollbar */
+        .messages-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .messages-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .messages-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .messages-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .message-bubble {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            position: relative;
+            animation: fadeInUp 0.3s ease-out forwards;
+            transition: all 0.2s;
+        }
+
+        .message-bubble:hover {
+            border-color: var(--primary);
+            background: #f0f2ff;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .message-text {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            word-break: break-word;
+            white-space: pre-wrap;
+            user-select: all;
+            line-height: 1.45;
+        }
+
+        .bubble-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: 8px;
+            justify-content: flex-end;
+        }
+
+        .copy-badge-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .copy-badge-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .copy-badge-btn.copied {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .empty-messages {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 24px;
+        }
+
+        .empty-messages svg {
+            color: #cbd5e1;
+            margin-bottom: 12px;
+        }
+
+        /* Localhost Alert Warning */
+        .localhost-alert {
+            background-color: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #b45309;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            margin-top: 16px;
+            text-align: left;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .localhost-inputs {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .localhost-inputs input {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            border: 1px solid #f59e0b;
+            background: #fff;
+            flex: 1;
+        }
+
+        .localhost-inputs button {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            background: #d97706;
+            color: white;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Truyền Văn Bản Bằng Mã QR</h1>
+                <p>Quét mã QR bằng điện thoại để gửi nhanh văn bản, ghi chú lên máy tính.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" id="btnBackToList" class="action-btn"
+                    style="background:#64748b; color:#fff; border: 1px solid #475569;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Quay lại
+                </button>
+            </div>
+        </header>
+
+        <div class="qr-layout">
+            <!-- Left Panel: QR Code and Setup -->
+            <div class="glass-card qr-card">
+                <div class="qr-instructions">
+                    <h3 style="margin-bottom: 8px; font-size: 1rem; font-weight: 700; color: var(--primary);">Hướng dẫn nhanh:</h3>
+                    <ol>
+                        <li>Dùng điện thoại quét mã QR bên dưới để mở trang gửi tin nhắn.</li>
+                        <li>Nhập văn bản từ điện thoại và ấn nút <strong>Gửi</strong>.</li>
+                        <li>Văn bản sẽ hiển thị tức thì trên danh sách nhận bên phải.</li>
+                    </ol>
+                </div>
+
+                <div id="qrCodeWrapper" class="qr-wrapper">
+                    <div id="qrcode"></div>
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; font-weight: 500; word-break: break-all;" id="qrUrlLabel">
+                    Đang tạo địa chỉ kết nối...
+                </div>
+
+                <!-- Localhost Network Alert Tool -->
+                <div id="localhostAlert" class="localhost-alert" style="display: none;">
+                    <div>
+                        <strong>💡 Bạn đang chạy ở Localhost!</strong> Để điện thoại có thể kết nối được, hai thiết bị phải dùng chung mạng Wifi.
+                    </div>
+                    <div>
+                        Nếu điện thoại không tải được trang, hãy nhập địa chỉ <strong>IP nội bộ máy tính</strong> của bạn (ví dụ: 192.168.1.15) vào ô dưới đây để tạo lại mã QR chính xác:
+                    </div>
+                    <div class="localhost-inputs">
+                        <input type="text" id="ipInput" placeholder="Nhập IP máy tính (vd: 192.168.x.x)">
+                        <button type="button" id="btnUpdateIp">Cập nhật QR</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Message Feed -->
+            <div class="glass-card">
+                <div class="messages-container">
+                    <div class="messages-header">
+                        <h3>
+                            <span class="pulse-dot"></span>
+                            <span>Danh sách văn bản nhận được</span>
+                        </h3>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="btnClearMessages" class="action-btn"
+                                style="background:#f1f5f9; color:#475569; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;">
+                                Xóa tất cả
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="messagesList" class="messages-list">
+                        <div class="empty-messages">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
+                                <path d="M2 22l6-6M22 2l-6 6"></path>
+                            </svg>
+                            <p style="font-weight: 500; font-size: 0.95rem;">Đang chờ dữ liệu gửi đến...</p>
+                            <p style="font-size: 0.8rem; margin-top: 4px;">Hãy quét mã QR bên trái và bắt đầu gửi tin nhắn từ điện thoại của bạn.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast info">Đã nhận tin nhắn mới!</div>
+
+    <script src="auth.js?v=20260317"></script>
+    <script>
+        // Require login for PC user
+        const auth = requireAuth({ redirectTo: 'login.html' });
+
+        // Firebase Configuration (Same as other pages)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxDaIIhmWJOB6w6Jg6Ch6a2-b_5HvJTWw",
+            authDomain: "english-fun-1937c.firebaseapp.com",
+            databaseURL: "https://english-fun-1937c-default-rtdb.firebaseio.com",
+            projectId: "english-fun-1937c",
+            storageBucket: "english-fun-1937c.firebasestorage.app",
+            messagingSenderId: "236020730818",
+            appId: "1:236020730818:web:4ebb378dc7a7005d2fa45b"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+
+        let sessionId = "";
+        let qrCodeInstance = null;
+        let originalTargetUrl = "";
+
+        // Web Audio API tone generator for message alerts
+        function playBeep() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5 note (nice ring)
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                
+                // Play for 150ms with a quick fadeout
+                osc.start(ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {
+                console.warn("Audio Context sound failed to play: ", e);
+            }
+        }
+
+        // Show Toast Function
+        function showToastMessage(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Generate dynamic link and QR Code
+        function generateQrCode(targetUrl) {
+            const qrContainer = document.getElementById("qrcode");
+            qrContainer.innerHTML = ""; // Clear old QR
+
+            qrCodeInstance = new QRCode(qrContainer, {
+                text: targetUrl,
+                width: 200,
+                height: 200,
+                colorDark: "#1e1b4b", // Indigo 950 for high contrast
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            const qrUrlLabel = document.getElementById("qrUrlLabel");
+            qrUrlLabel.innerHTML = `Link truyền: <a href="${targetUrl}" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: underline;">${targetUrl}</a>`;
+        }
+
+        // Listen for new messages in Firebase
+        function startListening(sId) {
+            const messagesRef = database.ref(`qr_sessions/${sId}/messages`);
+            const messagesList = document.getElementById("messagesList");
+            let isFirstLoad = true;
+
+            // Clear visual state when listener starts
+            messagesRef.once("value").then(() => {
+                isFirstLoad = false;
+            });
+
+            messagesRef.on("child_added", (snapshot) => {
+                const msg = snapshot.val();
+                const id = snapshot.key;
+
+                // Remove placeholder empty state if present
+                const emptyState = messagesList.querySelector(".empty-messages");
+                if (emptyState) emptyState.remove();
+
+                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+                
+                const bubble = document.createElement("div");
+                bubble.className = "message-bubble";
+                bubble.id = `msg_${id}`;
+                bubble.innerHTML = `
+                    <div class="message-time">
+                        <span>Đến từ di động</span>
+                        <span>${timeStr}</span>
+                    </div>
+                    <div class="message-text" id="text_${id}">${escapeHtml(msg.text)}</div>
+                    <div class="bubble-actions">
+                        <button class="copy-badge-btn" onclick="copyMessageText('${id}')">Sao chép</button>
+                    </div>
+                `;
+
+                // Add to top of messages list
+                messagesList.insertBefore(bubble, messagesList.firstChild);
+
+                // Play alert sound and toast for incoming messages (except during first load sync)
+                if (!isFirstLoad) {
+                    playBeep();
+                    showToastMessage("Nhận được văn bản mới từ điện thoại!");
+                }
+            });
+        }
+
+        // Utility to escape HTML and prevent XSS
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Copy Message Utility
+        window.copyMessageText = function (id) {
+            const textElement = document.getElementById(`text_${id}`);
+            if (!textElement) return;
+
+            navigator.clipboard.writeText(textElement.innerText).then(() => {
+                const btn = document.querySelector(`#msg_${id} .copy-badge-btn`);
+                if (btn) {
+                    btn.classList.add("copied");
+                    btn.innerText = "Đã sao chép!";
+                    setTimeout(() => {
+                        btn.classList.remove("copied");
+                        btn.innerText = "Sao chép";
+                    }, 2000);
+                }
+                showToastMessage("Đã copy vào clipboard!");
+            }).catch(err => {
+                alert("Lỗi sao chép: " + err);
+            });
+        };
+
+        // Initialize session and QR Code page
+        document.addEventListener("DOMContentLoaded", () => {
+            // Generate a unique session key using Firebase push keys
+            sessionId = database.ref('qr_sessions').push().key;
+
+            // Generate destination link: send_text.html in the same folder
+            const pathName = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+            const targetUrlBase = `${window.location.origin}${pathName}/send_text.html?sessionId=${sessionId}`;
+            originalTargetUrl = targetUrlBase;
+
+            // Generate the QR Code
+            generateQrCode(targetUrlBase);
+
+            // Hostname Checks for Localhost/127.0.0.1 (common developers' case)
+            const hostname = window.location.hostname;
+            if (hostname === "localhost" || hostname === "127.0.0.1") {
+                document.getElementById("localhostAlert").style.display = "flex";
+            }
+
+            // Start Firebase Realtime Listener
+            startListening(sessionId);
+
+            // Event Listeners
+            document.getElementById("btnBackToList").addEventListener("click", () => {
+                window.location.href = "list.html";
+            });
+
+            // Update IP Event (Manual Local Override)
+            document.getElementById("btnUpdateIp").addEventListener("click", () => {
+                const ipInput = document.getElementById("ipInput").value.trim();
+                if (!ipInput) {
+                    alert("Vui lòng nhập địa chỉ IP hợp lệ!");
+                    return;
+                }
+
+                // Match IP Address Pattern
+                const ipPattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+                const port = window.location.port ? `:${window.location.port}` : '';
+                
+                if (ipPattern.test(ipInput)) {
+                    const pathName = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                    const overriddenUrl = `http://${ipInput}${port}${pathName}/send_text.html?sessionId=${sessionId}`;
+                    generateQrCode(overriddenUrl);
+                    showToastMessage("Đã cập nhật mã QR theo IP máy tính!");
+                } else {
+                    alert("Địa chỉ IP không đúng định dạng. Ví dụ đúng: 192.168.1.15");
+                }
+            });
+
+            // Clear Session Messages Event
+            document.getElementById("btnClearMessages").addEventListener("click", () => {
+                if (confirm("Bạn có chắc muốn xóa tất cả tin nhắn trong phiên này trên database?")) {
+                    database.ref(`qr_sessions/${sessionId}`).remove().then(() => {
+                        const messagesList = document.getElementById("messagesList");
+                        messagesList.innerHTML = `
+                            <div class="empty-messages">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
+                                    <path d="M2 22l6-6M22 2l-6 6"></path>
+                                </svg>
+                                <p style="font-weight: 500; font-size: 0.95rem;">Đang chờ dữ liệu gửi đến...</p>
+                                <p style="font-size: 0.8rem; margin-top: 4px;">Hãy quét mã QR bên trái và bắt đầu gửi tin nhắn từ điện thoại của bạn.</p>
+                            </div>
+                        `;
+                        showToastMessage("Đã xóa sạch tin nhắn!");
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
