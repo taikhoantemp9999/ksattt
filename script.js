@@ -214,7 +214,7 @@ function renderSurveyorSelect() {
     let html = '<option value="">-- Chọn người khảo sát --</option>';
     
     // Tạo danh sách đã sort (chỉ lấy tên)
-    const sortedWriters = [...danhmucNguoiViet].sort((a,b) => a.ten.localeCompare(b.ten));
+    const sortedWriters = [...danhmucNguoiViet].sort((a,b) => (a.ten || '').localeCompare(b.ten || ''));
     
     sortedWriters.forEach(w => {
         html += `<option value="${w.ten}">${w.ten}</option>`;
@@ -229,7 +229,7 @@ function renderVnptSelect() {
     if (!select) return;
     const currentValue = select.value;
     let html = '<option value="">-- Chọn VNPT Khu Vực --</option>';
-    danhmucVnpt.sort((a,b) => a.ten.localeCompare(b.ten)).forEach(v => {
+    danhmucVnpt.sort((a,b) => (a.ten || '').localeCompare(b.ten || '')).forEach(v => {
         html += `<option value="${v.ten}">${v.ten}</option>`;
     });
     select.innerHTML = html;

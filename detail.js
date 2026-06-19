@@ -575,11 +575,11 @@ function renderBuildingsDetailed(buildingsArray) {
 
             const aName = (a.name || '').toLowerCase();
             const bName = (b.name || '').toLowerCase();
-            if (aName !== bName) return aName.localeCompare(bName);
+            if (aName !== bName) return (aName || '').localeCompare(bName || '');
 
             const aModel = (a.model || '').toLowerCase();
             const bModel = (b.model || '').toLowerCase();
-            return aModel.localeCompare(bModel);
+            return (aModel || '').localeCompare(bModel || '');
         });
 
         if (allEqs.length > 0) {
@@ -719,16 +719,20 @@ function exportEquipmentExcel(surveyData) {
         const aMain = a.isMain ? 1 : 0;
         const bMain = b.isMain ? 1 : 0;
         if (aMain !== bMain) return bMain - aMain;
-        const aName = a.name.toLowerCase();
-        const bName = b.name.toLowerCase();
-        if (aName !== bName) return aName.localeCompare(bName);
-        const aModel = a.model.toLowerCase();
-        const bModel = b.model.toLowerCase();
-        if (aModel !== bModel) return aModel.localeCompare(bModel);
-        const aB = a.building.toLowerCase();
-        const bB = b.building.toLowerCase();
-        if (aB !== bB) return aB.localeCompare(bB);
-        return a.area.toLowerCase().localeCompare(b.area.toLowerCase());
+        
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        if (aName !== bName) return (aName || '').localeCompare(bName || '');
+        
+        const aModel = (a.model || '').toLowerCase();
+        const bModel = (b.model || '').toLowerCase();
+        if (aModel !== bModel) return (aModel || '').localeCompare(bModel || '');
+        
+        const aB = (a.building || '').toLowerCase();
+        const bB = (b.building || '').toLowerCase();
+        if (aB !== bB) return (aB || '').localeCompare(bB || '');
+        
+        return (a.area || '').toLowerCase().localeCompare((b.area || '').toLowerCase());
     });
 
     // Xuất đúng “4 cột” như bảng + thêm Tòa nhà để tránh lẫn
